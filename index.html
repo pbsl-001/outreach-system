@@ -749,25 +749,28 @@
         // DATA PROCESSING
         // ============================================
         function processUploadedData(data) {
-            uploadedData = data.map((row, index) => ({
-                id: index + 1,
-                companyName: row['Company Name'] || row['company_name'] || '',
-                companyNumber: row['Company Number'] || row['company_number'] || '',
-                pscName: row['PSC Name'] || row['psc_name'] || row['Person with Significant Control'] || '',
-                pscTitle: row['Title'] || row['title'] || 'Mr',
-                addressLine1: row['Address Line 1'] || row['address_1'] || '',
-                addressLine2: row['Address Line 2'] || row['address_2'] || '',
-                city: row['City'] || row['city'] || '',
-                county: row['County'] || row['county'] || '',
-                postcode: row['Postcode'] || row['postcode'] || '',
-                reference: row['Reference'] || row['reference'] || generateReference(),
-                status: 'pending',
-                selected: false
-            }));
+    uploadedData = data.map((row, index) => ({
+        id: index + 1,
+        companyName: row['Company Name'] || row['company_name'] || '',
+        companyNumber: row['Company Number'] || row['company_number'] || '',
+        // Combine first and last name
+        pscName: ((row['PSC First Name'] || '') + ' ' + (row['PSC Last Name'] || '')).trim() || 
+                 row['PSC Name'] || row['psc_name'] || '',
+        pscTitle: row['PSC Title'] || row['Title'] || row['title'] || 'Mr',
+        // Map your address fields
+        addressLine1: row['PSC Address1'] || row['Address Line 1'] || row['address_1'] || '',
+        addressLine2: row['PSC Address2'] || row['Address Line 2'] || row['address_2'] || '',
+        city: row['PSC Address3'] || row['City'] || row['city'] || '',
+        county: row['PSC Address4'] || row['County'] || row['county'] || '',
+        postcode: row['PSC Postcode'] || row['Postcode'] || row['postcode'] || '',
+        reference: row['Reference'] || row['reference'] || generateReference(),
+        status: 'pending',
+        selected: false
+    }));
 
-            displayData();
-            updateStats();
-        }
+    displayData();
+    updateStats();
+}
 
         function generateReference() {
             const prefix = 'HD';
@@ -1450,4 +1453,5 @@
         });
     </script>
 </body>
+
 </html>
