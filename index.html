@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UK Business Outreach Automation System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .nav-tab.active {
+            color: #667eea;
+            background: white;
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .nav-tab .badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .upload-section {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-section.has-file {
+            border-style: solid;
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-verified {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-mismatch {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .letter-preview {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 40px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+        }
+
+        .letter-header {
+            text-decoration: underline;
+            margin-bottom: 20px;
+        }
+
+        .letter-address {
+            margin: 20px 0;
+        }
+
+        .letter-date {
+            margin: 20px 0;
+        }
+
+        .letter-body {
+            margin: 20px 0;
+            text-align: justify;
+        }
+
+        .letter-signature {
+            margin-top: 40px;
+        }
+
+        .envelope-preview {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            width: 400px;
+            height: 200px;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .envelope-address {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.8;
+        }
+
+        .edit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .edit-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        @media print {
+            .letter-preview {
+                page-break-inside: avoid;
+                margin: 0;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+            }
+
+            .envelope-preview {
+                page-break-inside: avoid;
+            }
+
+            .container,
+            .header,
+            .nav-tabs,
+            .action-buttons,
+            .upload-section,
+            .data-table {
+                display: none;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .api-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 100;
+        }
+
+        .api-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .api-status.demo {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>UK Business Outreach Automation</h1>
+            <p>Streamline your PSC verification, mail merge, and letter generation process</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('upload')">
+                📤 Upload & Import
+            </button>
+            <button class="nav-tab" onclick="switchTab('verify')">
+                ✓ Verify PSC Data
+                <span class="badge" id="verifyBadge" style="display: none;">0</span>
+            </button>
+            <button class="nav-tab" onclick="switchTab('merge')">
+                📝 Mail Merge
+                <span class="badge" id="mergeBadge" style="display: none;">0</span>
+            </button>
+            <button class="nav-tab" onclick="switchTab('print')">
+                🖨️ Print Queue
+                <span class="badge" id="printBadge" style="display: none;">0</span>
+            </button>
+        </div>
+
+        <div class="content">
+            <!-- Upload Tab -->
+            <div id="uploadTab" class="tab-content active">
+                <div class="upload-section" id="uploadSection">
+                    <h3>📁 Upload Excel Spreadsheet</h3>
+                    <p style="margin: 15px 0; color: #6c757d;">Upload your data from unique-sector-performance-data.co.uk</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                    <div id="fileInfo" style="margin-top: 20px; display: none;">
+                        <p style="color: #28a745; font-weight: 600;">✓ File loaded successfully</p>
+                        <p id="fileName" style="color: #6c757d; margin-top: 5px;"></p>
+                    </div>
+                </div>
+
+                <div id="dataPreview" style="display: none;">
+                    <h3 style="margin-bottom: 20px;">📊 Data Preview</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalRecords">0</div>
+                            <div class="stat-label">Total Records</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="uniqueCompanies">0</div>
+                            <div class="stat-label">Unique Companies</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="readyToVerify">0</div>
+                            <div class="stat-label">Ready to Verify</div>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="dataTable">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="proceedToVerification()">
+                            Proceed to Verification →
+                        </button>
+                        <button class="btn btn-secondary" onclick="addManualEntry()">
+                            + Add Manual Entry
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sample Data Section -->
+                <div id="sampleDataSection" style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 20px;">🎯 Or Use Sample Data</h3>
+                    <p style="color: #6c757d; margin-bottom: 20px;">Load sample data to test the system</p>
+                    <button class="btn btn-primary" onclick="loadSampleData()">
+                        Load Sample Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Verify Tab -->
+            <div id="verifyTab" class="tab-content">
+                <h3 style="margin-bottom: 20px;">🔍 PSC Verification Against Companies House</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="verificationProgress" style="width: 0%;">
+                        0%
+                    </div>
+                </div>
+                <div id="verificationContent">
+                    <p style="color: #6c757d; margin: 20px 0;">Upload data first to begin verification process.</p>
+                </div>
+                <div class="action-buttons" id="verifyActions" style="display: none;">
+                    <button class="btn btn-success" onclick="verifyAll()">
+                        <span id="verifyBtnText">Verify All Records</span>
+                        <span class="loading-spinner" id="verifySpinner" style="display: none;"></span>
+                    </button>
+                    <button class="btn btn-warning" onclick="verifySelected()">
+                        Verify Selected
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportVerificationReport()">
+                        Export Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mail Merge Tab -->
+            <div id="mergeTab" class="tab-content">
+                <h3 style="margin-bottom: 20px;">📮 Mail Merge Letters</h3>
+                <div id="mergeContent">
+                    <p style="color: #6c757d; margin: 20px 0;">Verify data first before proceeding with mail merge.</p>
+                </div>
+                <div id="lettersList" style="display: none;">
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="generateAllLetters()">
+                            Generate All Letters
+                        </button>
+                        <button class="btn btn-secondary" onclick="previewTemplate()">
+                            Preview Template
+                        </button>
+                        <button class="btn btn-warning" onclick="customizeTemplate()">
+                            Customize Template
+                        </button>
+                    </div>
+                    <div id="generatedLetters" style="margin-top: 30px;"></div>
+                </div>
+            </div>
+
+            <!-- Print Tab -->
+            <div id="printTab" class="tab-content">
+                <h3 style="margin-bottom: 20px;">🖨️ Print Queue Management</h3>
+                <div id="printContent">
+                    <p style="color: #6c757d; margin: 20px 0;">No letters ready for printing.</p>
+                </div>
+                <div id="printQueue" style="display: none;">
+                    <div class="action-buttons">
+                        <button class="btn btn-success" onclick="printBatch(20)">
+                            Print Batch (Max 20)
+                        </button>
+                        <button class="btn btn-primary" onclick="printSelected()">
+                            Print Selected
+                        </button>
+                        <button class="btn btn-warning" onclick="printEnvelopes()">
+                            Print Envelopes
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearPrintQueue()">
+                            Clear Queue
+                        </button>
+                    </div>
+                    <div id="printItems" style="margin-top: 30px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Record</h3>
+            </div>
+            <div id="modalBody">
+                <!-- Dynamic content -->
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Status Indicator -->
+    <div id="apiStatus" class="api-status demo">
+        Demo Mode (Deploy to activate API)
+    </div>
+
+    <script>
+        // ============================================
+        // NETLIFY API CONFIGURATION
+        // ============================================
+        const API_CONFIG = {
+            baseURL: window.location.hostname === 'localhost' 
+                ? 'http://localhost:8888/.netlify/functions/companies-house'
+                : '/.netlify/functions/companies-house',
+            demoMode: true  // Will be set to false when API is connected
+        };
+
+        // Check API connection
+        async function checkAPIConnection() {
+            try {
+                const response = await fetch(API_CONFIG.baseURL);
+                if (response.ok) {
+                    API_CONFIG.demoMode = false;
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                    document.getElementById('apiStatus').textContent = '✓ Companies House API Connected';
+                    console.log('✓ Companies House API connected');
+                    return true;
+                }
+            } catch (error) {
+                console.log('API not available - using demo mode');
+            }
+            return false;
+        }
+
+        // ============================================
+        // GLOBAL DATA STORAGE
+        // ============================================
+        let uploadedData = [];
+        let verifiedData = [];
+        let lettersGenerated = [];
+        let currentEditIndex = -1;
+
+        // ============================================
+        // TAB MANAGEMENT
+        // ============================================
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const tabs = ['upload', 'verify', 'merge', 'print'];
+            const tabIndex = tabs.indexOf(tabName);
+            document.querySelectorAll('.nav-tab')[tabIndex].classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // ============================================
+        // FILE UPLOAD HANDLER
+        // ============================================
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        processUploadedData(jsonData);
+                        
+                        document.getElementById('uploadSection').classList.add('has-file');
+                        document.getElementById('fileInfo').style.display = 'block';
+                        document.getElementById('fileName').textContent = file.name;
+                        document.getElementById('sampleDataSection').style.display = 'none';
+                    } catch (error) {
+                        alert('Error reading file. Please ensure it\'s a valid Excel file.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        // ============================================
+        // DATA PROCESSING
+        // ============================================
+        function processUploadedData(data) {
+            uploadedData = data.map((row, index) => ({
+                id: index + 1,
+                companyName: row['Company Name'] || row['company_name'] || '',
+                companyNumber: row['Company Number'] || row['company_number'] || '',
+                pscName: row['PSC Name'] || row['psc_name'] || row['Person with Significant Control'] || '',
+                pscTitle: row['Title'] || row['title'] || 'Mr',
+                addressLine1: row['Address Line 1'] || row['address_1'] || '',
+                addressLine2: row['Address Line 2'] || row['address_2'] || '',
+                city: row['City'] || row['city'] || '',
+                county: row['County'] || row['county'] || '',
+                postcode: row['Postcode'] || row['postcode'] || '',
+                reference: row['Reference'] || row['reference'] || generateReference(),
+                status: 'pending',
+                selected: false
+            }));
+
+            displayData();
+            updateStats();
+        }
+
+        function generateReference() {
+            const prefix = 'HD';
+            const number = Math.floor(100000 + Math.random() * 900000);
+            return `${prefix}/${number}`;
+        }
+
+        function displayData() {
+            const table = document.getElementById('dataTable');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+                <th><input type="checkbox" onchange="selectAll(this)"></th>
+                <th>Company Name</th>
+                <th>Company Number</th>
+                <th>PSC Name</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Actions</th>
+            `;
+            thead.appendChild(headerRow);
+            
+            uploadedData.forEach((record, index) => {
+                const row = document.createElement('tr');
+                const address = `${record.addressLine1}, ${record.city}, ${record.postcode}`;
+                const statusClass = record.status === 'verified' ? 'status-verified' : 
+                                   record.status === 'mismatch' ? 'status-mismatch' : 'status-pending';
+                
+                row.innerHTML = `
+                    <td><input type="checkbox" ${record.selected ? 'checked' : ''} onchange="toggleSelection(${index})"></td>
+                    <td>${record.companyName}</td>
+                    <td>${record.companyNumber}</td>
+                    <td>${record.pscTitle} ${record.pscName}</td>
+                    <td>${address}</td>
+                    <td><span class="status-badge ${statusClass}">${record.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editRecord(${index})" style="padding: 5px 10px; font-size: 0.85rem;">Edit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="deleteRecord(${index})" style="padding: 5px 10px; font-size: 0.85rem;">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('dataPreview').style.display = 'block';
+        }
+
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = uploadedData.length;
+            document.getElementById('uniqueCompanies').textContent = 
+                new Set(uploadedData.map(r => r.companyNumber)).size;
+            document.getElementById('readyToVerify').textContent = 
+                uploadedData.filter(r => r.status === 'pending').length;
+            
+            const pendingCount = uploadedData.filter(r => r.status === 'pending').length;
+            updateBadge('verifyBadge', pendingCount);
+            
+            const verifiedCount = uploadedData.filter(r => r.status === 'verified').length;
+            updateBadge('mergeBadge', verifiedCount);
+        }
+
+        function updateBadge(badgeId, count) {
+            const badge = document.getElementById(badgeId);
+            if (count > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = count;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // SAMPLE DATA
+        // ============================================
+        function loadSampleData() {
+            const sampleData = [
+                {
+                    companyName: 'Davies Crane Hire Holdings Limited',
+                    companyNumber: '08234567',
+                    pscName: 'Malcolm Davies',
+                    pscTitle: 'Mr',
+                    addressLine1: 'Pensarn Works',
+                    addressLine2: 'Pensarn',
+                    city: 'Carmarthen',
+                    county: 'Dyfed',
+                    postcode: 'SA31 2NG',
+                    reference: 'HD/150902'
+                },
+                {
+                    companyName: 'Smith Engineering Services Ltd',
+                    companyNumber: '09876543',
+                    pscName: 'James Smith',
+                    pscTitle: 'Mr',
+                    addressLine1: '45 Industrial Estate',
+                    addressLine2: 'Westfield Road',
+                    city: 'Birmingham',
+                    county: 'West Midlands',
+                    postcode: 'B15 3TH',
+                    reference: 'HD/150903'
+                },
+                {
+                    companyName: 'Thompson Manufacturing Group',
+                    companyNumber: '07654321',
+                    pscName: 'Sarah Thompson',
+                    pscTitle: 'Ms',
+                    addressLine1: 'Unit 12, Valley Business Park',
+                    addressLine2: '',
+                    city: 'Leeds',
+                    county: 'West Yorkshire',
+                    postcode: 'LS12 5BH',
+                    reference: 'HD/150904'
+                }
+            ];
+
+            uploadedData = sampleData.map((row, index) => ({
+                ...row,
+                id: index + 1,
+                status: 'pending',
+                selected: false
+            }));
+
+            displayData();
+            updateStats();
+            
+            document.getElementById('uploadSection').classList.add('has-file');
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('fileName').textContent = 'Sample Data (3 records)';
+            document.getElementById('sampleDataSection').style.display = 'none';
+        }
+
+        // ============================================
+        // SELECTION HANDLERS
+        // ============================================
+        function selectAll(checkbox) {
+            uploadedData.forEach(record => record.selected = checkbox.checked);
+            displayData();
+        }
+
+        function toggleSelection(index) {
+            uploadedData[index].selected = !uploadedData[index].selected;
+        }
+
+        // ============================================
+        // EDIT & DELETE FUNCTIONS
+        // ============================================
+        function editRecord(index) {
+            currentEditIndex = index;
+            const record = uploadedData[index];
+            
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" id="editCompanyName" value="${record.companyName}">
+                </div>
+                <div class="form-group">
+                    <label>Company Number</label>
+                    <input type="text" id="editCompanyNumber" value="${record.companyNumber}">
+                </div>
+                <div class="form-group">
+                    <label>PSC Title</label>
+                    <input type="text" id="editPscTitle" value="${record.pscTitle}">
+                </div>
+                <div class="form-group">
+                    <label>PSC Name</label>
+                    <input type="text" id="editPscName" value="${record.pscName}">
+                </div>
+                <div class="form-group">
+                    <label>Address Line 1</label>
+                    <input type="text" id="editAddressLine1" value="${record.addressLine1}">
+                </div>
+                <div class="form-group">
+                    <label>Address Line 2</label>
+                    <input type="text" id="editAddressLine2" value="${record.addressLine2 || ''}">
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="editCity" value="${record.city}">
+                </div>
+                <div class="form-group">
+                    <label>County</label>
+                    <input type="text" id="editCounty" value="${record.county}">
+                </div>
+                <div class="form-group">
+                    <label>Postcode</label>
+                    <input type="text" id="editPostcode" value="${record.postcode}">
+                </div>
+                <div class="form-group">
+                    <label>Reference</label>
+                    <input type="text" id="editReference" value="${record.reference}">
+                </div>
+            `;
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function saveEdit() {
+            if (currentEditIndex >= 0) {
+                uploadedData[currentEditIndex] = {
+                    ...uploadedData[currentEditIndex],
+                    companyName: document.getElementById('editCompanyName').value,
+                    companyNumber: document.getElementById('editCompanyNumber').value,
+                    pscTitle: document.getElementById('editPscTitle').value,
+                    pscName: document.getElementById('editPscName').value,
+                    addressLine1: document.getElementById('editAddressLine1').value,
+                    addressLine2: document.getElementById('editAddressLine2').value,
+                    city: document.getElementById('editCity').value,
+                    county: document.getElementById('editCounty').value,
+                    postcode: document.getElementById('editPostcode').value,
+                    reference: document.getElementById('editReference').value
+                };
+                
+                displayData();
+                closeModal();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+            currentEditIndex = -1;
+        }
+
+        function deleteRecord(index) {
+            if (confirm('Are you sure you want to delete this record?')) {
+                uploadedData.splice(index, 1);
+                displayData();
+                updateStats();
+            }
+        }
+
+        function addManualEntry() {
+            const newRecord = {
+                id: uploadedData.length + 1,
+                companyName: '',
+                companyNumber: '',
+                pscName: '',
+                pscTitle: 'Mr',
+                addressLine1: '',
+                addressLine2: '',
+                city: '',
+                county: '',
+                postcode: '',
+                reference: generateReference(),
+                status: 'pending',
+                selected: false
+            };
+            
+            uploadedData.push(newRecord);
+            displayData();
+            updateStats();
+            editRecord(uploadedData.length - 1);
+        }
+
+        // ============================================
+        // VERIFICATION FUNCTIONS - NETLIFY READY
+        // ============================================
+        function proceedToVerification() {
+            if (uploadedData.length === 0) {
+                alert('Please upload data first');
+                return;
+            }
+            
+            switchTab('verify');
+            setupVerification();
+        }
+
+        function setupVerification() {
+            const verificationContent = document.getElementById('verificationContent');
+            verificationContent.innerHTML = `
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" onchange="selectAllVerify(this)"></th>
+                                <th>Company</th>
+                                <th>PSC Name</th>
+                                <th>Current Address</th>
+                                <th>Companies House</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="verifyTableBody">
+                            ${uploadedData.map((record, index) => `
+                                <tr>
+                                    <td><input type="checkbox" ${record.selected ? 'checked' : ''}></td>
+                                    <td>${record.companyName}<br><small>${record.companyNumber}</small></td>
+                                    <td>${record.pscTitle} ${record.pscName}</td>
+                                    <td>${record.addressLine1}<br>${record.city}, ${record.postcode}</td>
+                                    <td id="chData${index}">-</td>
+                                    <td><span class="status-badge ${getStatusClass(record.status)}">${record.status}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm" onclick="verifyIndividual(${index})" style="padding: 5px 10px;">Verify</button>
+                                        <button class="btn btn-sm btn-warning" onclick="acceptCHData(${index})" style="padding: 5px 10px; display: none;" id="acceptBtn${index}">Accept CH</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('verifyActions').style.display = 'flex';
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'verified': return 'status-verified';
+                case 'mismatch': return 'status-mismatch';
+                default: return 'status-pending';
+            }
+        }
+
+        async function verifyAll() {
+            const button = document.getElementById('verifyBtnText');
+            const spinner = document.getElementById('verifySpinner');
+            
+            button.textContent = 'Verifying...';
+            spinner.style.display = 'inline-block';
+            
+            for (let i = 0; i < uploadedData.length; i++) {
+                if (uploadedData[i].status === 'pending') {
+                    await verifyIndividual(i);
+                    
+                    const progress = ((i + 1) / uploadedData.length) * 100;
+                    document.getElementById('verificationProgress').style.width = progress + '%';
+                    document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
+                }
+            }
+            
+            button.textContent = 'Verify All Records';
+            spinner.style.display = 'none';
+            
+            alert('Verification complete!');
+            updateStats();
+        }
+
+        async function verifyIndividual(index) {
+            const record = uploadedData[index];
+            
+            // If in demo mode, simulate verification
+            if (API_CONFIG.demoMode) {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (Math.random() > 0.7) {
+                            uploadedData[index].status = 'mismatch';
+                            document.getElementById(`acceptBtn${index}`).style.display = 'inline-block';
+                        } else {
+                            uploadedData[index].status = 'verified';
+                        }
+                        
+                        document.getElementById(`chData${index}`).innerHTML = 
+                            `${record.addressLine1}<br>${record.city}, ${record.postcode}`;
+                        
+                        const statusCell = document.querySelector(`#verifyTableBody tr:nth-child(${index + 1}) td:nth-child(6) span`);
+                        if (statusCell) {
+                            statusCell.className = `status-badge ${getStatusClass(uploadedData[index].status)}`;
+                            statusCell.textContent = uploadedData[index].status;
+                        }
+                        
+                        resolve();
+                    }, 500);
+                });
+            }
+            
+            // Real API call when deployed to Netlify
+            try {
+                const companyNumber = record.companyNumber.replace(/\s/g, '');
+                const response = await fetch(`${API_CONFIG.baseURL}/psc/${companyNumber}`);
+                
+                if (!response.ok) {
+                    uploadedData[index].status = 'pending';
+                    document.getElementById(`chData${index}`).innerHTML = 'Not found';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    let found = false;
+                    for (const psc of data.items) {
+                        const pscName = (psc.name || '').toLowerCase();
+                        const recordName = record.pscName.toLowerCase();
+                        
+                        if (pscName.includes(recordName) || recordName.includes(pscName)) {
+                            found = true;
+                            
+                            const pscPostcode = (psc.address?.postal_code || '').replace(/\s/g, '');
+                            const recordPostcode = record.postcode.replace(/\s/g, '');
+                            
+                            if (pscPostcode.toLowerCase() === recordPostcode.toLowerCase()) {
+                                uploadedData[index].status = 'verified';
+                            } else {
+                                uploadedData[index].status = 'mismatch';
+                                document.getElementById(`acceptBtn${index}`).style.display = 'inline-block';
+                            }
+                            
+                            const addr = psc.address || {};
+                            const chAddress = `${addr.premises || ''} ${addr.address_line_1 || ''}<br>
+                                ${addr.locality || ''}, ${addr.postal_code || ''}`;
+                            document.getElementById(`chData${index}`).innerHTML = chAddress;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        uploadedData[index].status = 'mismatch';
+                        document.getElementById(`chData${index}`).innerHTML = 'Person not found';
+                    }
+                } else {
+                    uploadedData[index].status = 'pending';
+                    document.getElementById(`chData${index}`).innerHTML = 'No PSC data';
+                }
+                
+                const statusCell = document.querySelector(`#verifyTableBody tr:nth-child(${index + 1}) td:nth-child(6) span`);
+                if (statusCell) {
+                    statusCell.className = `status-badge ${getStatusClass(uploadedData[index].status)}`;
+                    statusCell.textContent = uploadedData[index].status;
+                }
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+                uploadedData[index].status = 'pending';
+                document.getElementById(`chData${index}`).innerHTML = 'Error checking';
+            }
+        }
+
+        function acceptCHData(index) {
+            uploadedData[index].addressLine1 = uploadedData[index].addressLine1 + ' (Updated)';
+            uploadedData[index].status = 'verified';
+            
+            const statusCell = document.querySelector(`#verifyTableBody tr:nth-child(${index + 1}) td:nth-child(6) span`);
+            statusCell.className = 'status-badge status-verified';
+            statusCell.textContent = 'verified';
+            
+            document.getElementById(`acceptBtn${index}`).style.display = 'none';
+            
+            updateStats();
+        }
+
+        // ============================================
+        // LETTER GENERATION
+        // ============================================
+        function generateAllLetters() {
+            const verifiedRecords = uploadedData.filter(r => r.status === 'verified');
+            
+            if (verifiedRecords.length === 0) {
+                alert('No verified records to generate letters for');
+                return;
+            }
+            
+            lettersGenerated = verifiedRecords.map(record => ({
+                ...record,
+                letterContent: generateLetterContent(record),
+                envelopeContent: generateEnvelopeContent(record)
+            }));
+            
+            displayGeneratedLetters();
+            updateBadge('printBadge', lettersGenerated.length);
+        }
+
+        function generateLetterContent(record) {
+            const today = new Date().toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            return `
+                <div class="letter-preview">
+                    <div class="letter-header">[STRICTLY PRIVATE AND CONFIDENTIAL]</div>
+                    <div style="text-align: right;">London Office</div>
+                    
+                    <div class="letter-address">
+                        ${record.pscTitle} ${record.pscName}<br>
+                        ${record.addressLine1}<br>
+                        ${record.addressLine2 ? record.addressLine2 + '<br>' : ''}
+                        ${record.city}<br>
+                        ${record.county}<br>
+                        ${record.postcode}
+                    </div>
+                    
+                    <div class="letter-date">${today}</div>
+                    
+                    <div>Dear ${record.pscTitle} ${record.pscName.split(' ').pop()},</div>
+                    
+                    <div style="margin: 20px 0;">
+                        <strong>Ref: ${record.reference}</strong>
+                    </div>
+                    
+                    <div class="letter-body">
+                        <p>I am writing to you on a confidential basis following specific acquisition research work we have recently carried out.</p>
+                        
+                        <p>It would appear that ${record.companyName} falls within the acquisition brief of a particular acquirer client of ours, thus I am writing to establish if you are interested in having an initial discussion regarding the possible sale of your business.</p>
+                        
+                        <p>As corporate intermediaries established for more than 40 years, we carry out acquisition work for our public and private company and private equity acquirer clients who have funds totalling more than £5bn to acquire businesses on a strictly private and confidential basis. We are a discreet firm and do not advertise to the public.</p>
+                        
+                        <p>The fees for our services are paid by our client, the acquirer, and we would make no charge to you, the vendor. We usually deal with vendor businesses which have not formally announced they are for sale, are not being actively marketed for sale and are seeking a discreet sale.</p>
+                        
+                        <p>If you are interested in such a possibility, I should welcome the opportunity of having an exploratory discussion with you at a time that suits you. I can assure you that the matter would be dealt with on a strictly confidential basis and would receive my immediate attention.</p>
+                        
+                        <p>I hope to hear from you at an early date and can be contacted directly on 0203 633 4829 or by email at: rudi@mgbco.co.uk.</p>
+                    </div>
+                    
+                    <div class="letter-signature">
+                        <p>Yours sincerely,</p>
+                        <br>
+                        <br>
+                        <p>Rudi Prenzlin</p>
+                        <p><u>Acquisitions Specialist</u></p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateEnvelopeContent(record) {
+            return `
+                <div class="envelope-preview">
+                    <div class="envelope-address">
+                        ${record.pscTitle} ${record.pscName}<br>
+                        ${record.addressLine1}<br>
+                        ${record.addressLine2 ? record.addressLine2 + '<br>' : ''}
+                        ${record.city}<br>
+                        ${record.county}<br>
+                        ${record.postcode}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayGeneratedLetters() {
+            const container = document.getElementById('generatedLetters');
+            container.innerHTML = '<h4>Generated Letters Preview</h4>';
+            
+            lettersGenerated.forEach((letter, index) => {
+                const letterDiv = document.createElement('div');
+                letterDiv.innerHTML = `
+                    <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                        <h5>${letter.companyName} - ${letter.pscTitle} ${letter.pscName}</h5>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="previewLetter(${index})">Preview Letter</button>
+                            <button class="btn btn-warning" onclick="previewEnvelope(${index})">Preview Envelope</button>
+                            <button class="btn btn-success" onclick="addToPrintQueue(${index})">Add to Print Queue</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(letterDiv);
+            });
+            
+            document.getElementById('lettersList').style.display = 'block';
+        }
+
+        function previewLetter(index) {
+            const letter = lettersGenerated[index];
+            const previewWindow = window.open('', '_blank');
+            previewWindow.document.write(`
+                <html>
+                <head>
+                    <title>Letter Preview - ${letter.companyName}</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; }
+                        .letter-preview { padding: 40px; }
+                    </style>
+                </head>
+                <body>
+                    ${letter.letterContent}
+                    <button onclick="window.print()" style="margin: 20px; padding: 10px 20px;">Print Letter</button>
+                </body>
+                </html>
+            `);
+        }
+
+        function previewEnvelope(index) {
+            const letter = lettersGenerated[index];
+            const previewWindow = window.open('', '_blank');
+            previewWindow.document.write(`
+                <html>
+                <head>
+                    <title>Envelope Preview - ${letter.companyName}</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; }
+                    </style>
+                </head>
+                <body>
+                    ${letter.envelopeContent}
+                    <button onclick="window.print()" style="margin: 20px; padding: 10px 20px;">Print Envelope</button>
+                </body>
+                </html>
+            `);
+        }
+
+        function printBatch(limit = 20) {
+            const toPrint = lettersGenerated.slice(0, limit);
+            
+            if (toPrint.length === 0) {
+                alert('No letters in queue');
+                return;
+            }
+            
+            const printWindow = window.open('', '_blank');
+            const letters = toPrint.map(l => l.letterContent).join('<div style="page-break-after: always;"></div>');
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Print Batch - ${toPrint.length} Letters</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print" style="padding: 20px; background: #f8f9fa;">
+                        <h2>Print Preview - ${toPrint.length} Letters</h2>
+                        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px;">Print All</button>
+                    </div>
+                    ${letters}
+                </body>
+                </html>
+            `);
+        }
+
+        function printEnvelopes() {
+            const envelopes = lettersGenerated.map(l => l.envelopeContent).join('<div style="page-break-after: always;"></div>');
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Print Envelopes</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print" style="padding: 20px; background: #f8f9fa;">
+                        <h2>Print Preview - ${lettersGenerated.length} Envelopes</h2>
+                        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px;">Print All</button>
+                    </div>
+                    ${envelopes}
+                </body>
+                </html>
+            `);
+        }
+
+        function exportVerificationReport() {
+            const report = uploadedData.map(record => ({
+                'Company Name': record.companyName,
+                'Company Number': record.companyNumber,
+                'PSC Name': `${record.pscTitle} ${record.pscName}`,
+                'Address': `${record.addressLine1}, ${record.city}, ${record.postcode}`,
+                'Status': record.status,
+                'Reference': record.reference
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(report);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Verification Report');
+            
+            const date = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `verification_report_${date}.xlsx`);
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.addEventListener('DOMContentLoaded', function() {
+            checkAPIConnection();
+            console.log('UK Business Outreach Automation System loaded');
+            console.log('Version: Netlify Ready');
+        });
+    </script>
+</body>
+</html>
