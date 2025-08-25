@@ -1,13 +1,15 @@
-// This file handles all Companies House API calls
+// netlify/functions/companies-house.js
+// This function handles all Companies House API calls
+
 exports.handler = async (event, context) => {
-    // Allow your website to talk to this function
+    // Enable CORS for your application
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
     };
 
-    // Handle browser pre-flight checks
+    // Handle preflight requests
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -16,69 +18,79 @@ exports.handler = async (event, context) => {
         };
     }
 
-    // Get your API key from Netlify (we'll set this up later)
+    // Get API key from environment variable
     const API_KEY = process.env.COMPANIES_HOUSE_API_KEY;
     
     if (!API_KEY) {
         return {
-            statusCode: 500,
+            statusCode: 200,
             headers,
             body: JSON.stringify({ 
-                error: 'API key not configured yet. Please set it in Netlify.' 
+                error: 'API key not configured',
+                message: 'Please set COMPANIES_HOUSE_API_KEY in Netlify environment variables'
             })
         };
     }
 
-    // Get what was requested
+    // Parse the request path
     const path = event.path.replace('/.netlify/functions/companies-house', '');
+    
+    // Log for debugging
+    console.log('Request path:', path);
+    console.log('API Key present:', !!API_KEY);
 
     try {
         let endpoint = '';
 
-        // Handle different types of requests
-        if (path.includes('/company/')) {
-            // Get company information
-            const companyNumber = path.split('/company/')[1];
-            endpoint = `/company/${companyNumber}`;
-        } else if (path.includes('/psc/')) {
-            // Get PSC (people) information
+        // Handle different request types
+        if (path.includes('/psc/')) {
+            // Get PSC data
             const companyNumber = path.split('/psc/')[1];
             endpoint = `/company/${companyNumber}/persons-with-significant-control`;
+        } else if (path.includes('/company/')) {
+            // Get company info
+            const companyNumber = path.split('/company/')[1];
+            endpoint = `/company/${companyNumber}`;
         } else if (path.includes('/officers/')) {
-            // Get officers information
+            // Get officers
             const companyNumber = path.split('/officers/')[1];
             endpoint = `/company/${companyNumber}/officers`;
         } else {
-            // Default response
+            // Default response - API is working
             return {
                 statusCode: 200,
                 headers,
                 body: JSON.stringify({
-                    message: 'Companies House API is ready',
-                    status: 'working'
+                    message: 'Companies House API Function is working',
+                    status: 'ready',
+                    apiKeyConfigured: true,
+                    path: path || '/',
+                    instructions: 'Use /psc/{number}, /company/{number}, or /officers/{number}'
                 })
             };
         }
 
-        // Make the actual request to Companies House
-        const apiUrl = 'https://api.company-information.service.gov.uk' + endpoint;
+        // Make request to Companies House API
+        console.log('Making request to Companies House:', endpoint);
         
-        // Create the authorization
+        const apiUrl = 'https://api.company-information.service.gov.uk' + endpoint;
         const authString = Buffer.from(API_KEY + ':').toString('base64');
         
-        // Fetch the data
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
-                'Authorization': 'Basic ' + authString
+                'Authorization': 'Basic ' + authString,
+                'Accept': 'application/json'
             }
         });
 
         const data = await response.json();
+        
+        console.log('Companies House response status:', response.status);
 
-        // Send the data back to your website
+        // Return the response
         return {
-            statusCode: response.ok ? 200 : response.status,
+            statusCode: response.status,
             headers: {
                 ...headers,
                 'Content-Type': 'application/json'
@@ -87,13 +99,14 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        // If something goes wrong, return an error
+        console.error('Function error:', error);
         return {
             statusCode: 500,
             headers,
             body: JSON.stringify({ 
-                error: 'Something went wrong',
-                details: error.message 
+                error: 'Internal server error',
+                message: error.message,
+                details: 'Check function logs for more information'
             })
         };
     }
