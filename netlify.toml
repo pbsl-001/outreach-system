@@ -1,7 +1,10 @@
-# Netlify configuration
 [build]
-  functions = "netlify/functions"
   publish = "."
+  functions = "netlify/functions"
+  command = ""
+
+[build.environment]
+  NODE_VERSION = "18"
 
 [[headers]]
   for = "/*"
@@ -9,3 +12,4 @@
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
