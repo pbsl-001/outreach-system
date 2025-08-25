@@ -746,31 +746,33 @@
         });
 
         // ============================================
-        // DATA PROCESSING
+        // DATA PROCESSING - UPDATED FOR YOUR EXCEL FORMAT
         // ============================================
         function processUploadedData(data) {
-    uploadedData = data.map((row, index) => ({
-        id: index + 1,
-        companyName: row['Company Name'] || row['company_name'] || '',
-        companyNumber: row['Company Number'] || row['company_number'] || '',
-        // Combine first and last name
-        pscName: ((row['PSC First Name'] || '') + ' ' + (row['PSC Last Name'] || '')).trim() || 
-                 row['PSC Name'] || row['psc_name'] || '',
-        pscTitle: row['PSC Title'] || row['Title'] || row['title'] || 'Mr',
-        // Map your address fields
-        addressLine1: row['PSC Address1'] || row['Address Line 1'] || row['address_1'] || '',
-        addressLine2: row['PSC Address2'] || row['Address Line 2'] || row['address_2'] || '',
-        city: row['PSC Address3'] || row['City'] || row['city'] || '',
-        county: row['PSC Address4'] || row['County'] || row['county'] || '',
-        postcode: row['PSC Postcode'] || row['Postcode'] || row['postcode'] || '',
-        reference: row['Reference'] || row['reference'] || generateReference(),
-        status: 'pending',
-        selected: false
-    }));
+            uploadedData = data.map((row, index) => ({
+                id: index + 1,
+                companyName: row['Company Name'] || row['company_name'] || '',
+                companyNumber: row['Company Number'] || row['company_number'] || '',
+                // Keep names separate for proper mail merge
+                pscTitle: row['PSC Title'] || row['Title'] || 'Mr',
+                pscFirstName: row['PSC First Name'] || row['PSC_First_Name'] || '',
+                pscLastName: row['PSC Last Name'] || row['PSC_Last_Name'] || '',
+                // Combined name for display
+                pscFullName: ((row['PSC First Name'] || '') + ' ' + (row['PSC Last Name'] || '')).trim(),
+                // Address fields - your Excel structure
+                addressLine1: row['PSC Address1'] || row['Address Line 1'] || '',
+                addressLine2: row['PSC Address2'] || row['Address Line 2'] || '',
+                city: row['PSC Address3'] || row['City'] || '',
+                county: row['PSC Address4'] || row['County'] || '',
+                postcode: row['PSC Postcode'] || row['Postcode'] || '',
+                reference: row['Reference'] || row['reference'] || generateReference(),
+                status: 'pending',
+                selected: false
+            }));
 
-    displayData();
-    updateStats();
-}
+            displayData();
+            updateStats();
+        }
 
         function generateReference() {
             const prefix = 'HD';
@@ -808,7 +810,7 @@
                     <td><input type="checkbox" ${record.selected ? 'checked' : ''} onchange="toggleSelection(${index})"></td>
                     <td>${record.companyName}</td>
                     <td>${record.companyNumber}</td>
-                    <td>${record.pscTitle} ${record.pscName}</td>
+                    <td>${record.pscTitle} ${record.pscFullName}</td>
                     <td>${address}</td>
                     <td><span class="status-badge ${statusClass}">${record.status}</span></td>
                     <td>
@@ -854,8 +856,10 @@
                 {
                     companyName: 'Davies Crane Hire Holdings Limited',
                     companyNumber: '08234567',
-                    pscName: 'Malcolm Davies',
                     pscTitle: 'Mr',
+                    pscFirstName: 'Malcolm',
+                    pscLastName: 'Davies',
+                    pscFullName: 'Malcolm Davies',
                     addressLine1: 'Pensarn Works',
                     addressLine2: 'Pensarn',
                     city: 'Carmarthen',
@@ -866,8 +870,10 @@
                 {
                     companyName: 'Smith Engineering Services Ltd',
                     companyNumber: '09876543',
-                    pscName: 'James Smith',
                     pscTitle: 'Mr',
+                    pscFirstName: 'James',
+                    pscLastName: 'Smith',
+                    pscFullName: 'James Smith',
                     addressLine1: '45 Industrial Estate',
                     addressLine2: 'Westfield Road',
                     city: 'Birmingham',
@@ -878,8 +884,10 @@
                 {
                     companyName: 'Thompson Manufacturing Group',
                     companyNumber: '07654321',
-                    pscName: 'Sarah Thompson',
                     pscTitle: 'Ms',
+                    pscFirstName: 'Sarah',
+                    pscLastName: 'Thompson',
+                    pscFullName: 'Sarah Thompson',
                     addressLine1: 'Unit 12, Valley Business Park',
                     addressLine2: '',
                     city: 'Leeds',
@@ -939,8 +947,12 @@
                     <input type="text" id="editPscTitle" value="${record.pscTitle}">
                 </div>
                 <div class="form-group">
-                    <label>PSC Name</label>
-                    <input type="text" id="editPscName" value="${record.pscName}">
+                    <label>PSC First Name</label>
+                    <input type="text" id="editPscFirstName" value="${record.pscFirstName}">
+                </div>
+                <div class="form-group">
+                    <label>PSC Last Name</label>
+                    <input type="text" id="editPscLastName" value="${record.pscLastName}">
                 </div>
                 <div class="form-group">
                     <label>Address Line 1</label>
@@ -973,12 +985,17 @@
 
         function saveEdit() {
             if (currentEditIndex >= 0) {
+                const firstName = document.getElementById('editPscFirstName').value;
+                const lastName = document.getElementById('editPscLastName').value;
+                
                 uploadedData[currentEditIndex] = {
                     ...uploadedData[currentEditIndex],
                     companyName: document.getElementById('editCompanyName').value,
                     companyNumber: document.getElementById('editCompanyNumber').value,
                     pscTitle: document.getElementById('editPscTitle').value,
-                    pscName: document.getElementById('editPscName').value,
+                    pscFirstName: firstName,
+                    pscLastName: lastName,
+                    pscFullName: (firstName + ' ' + lastName).trim(),
                     addressLine1: document.getElementById('editAddressLine1').value,
                     addressLine2: document.getElementById('editAddressLine2').value,
                     city: document.getElementById('editCity').value,
@@ -1010,8 +1027,10 @@
                 id: uploadedData.length + 1,
                 companyName: '',
                 companyNumber: '',
-                pscName: '',
                 pscTitle: 'Mr',
+                pscFirstName: '',
+                pscLastName: '',
+                pscFullName: '',
                 addressLine1: '',
                 addressLine2: '',
                 city: '',
@@ -1029,7 +1048,7 @@
         }
 
         // ============================================
-        // VERIFICATION FUNCTIONS - NETLIFY READY
+        // VERIFICATION FUNCTIONS - IMPROVED MATCHING
         // ============================================
         function proceedToVerification() {
             if (uploadedData.length === 0) {
@@ -1062,7 +1081,7 @@
                                 <tr>
                                     <td><input type="checkbox" ${record.selected ? 'checked' : ''}></td>
                                     <td>${record.companyName}<br><small>${record.companyNumber}</small></td>
-                                    <td>${record.pscTitle} ${record.pscName}</td>
+                                    <td>${record.pscTitle} ${record.pscFullName}</td>
                                     <td>${record.addressLine1}<br>${record.city}, ${record.postcode}</td>
                                     <td id="chData${index}">-</td>
                                     <td><span class="status-badge ${getStatusClass(record.status)}">${record.status}</span></td>
@@ -1112,6 +1131,7 @@
             updateStats();
         }
 
+        // IMPROVED VERIFICATION WITH BETTER MATCHING
         async function verifyIndividual(index) {
             const record = uploadedData[index];
             
@@ -1147,76 +1167,116 @@
                 
                 if (!response.ok) {
                     uploadedData[index].status = 'pending';
-                    document.getElementById(`chData${index}`).innerHTML = 'Not found';
+                    document.getElementById(`chData${index}`).innerHTML = 'Company not found';
+                    updateStatusDisplay(index);
                     return;
                 }
                 
                 const data = await response.json();
                 
                 if (data.items && data.items.length > 0) {
-                    let found = false;
+                    let bestMatch = null;
+                    let bestScore = 0;
+                    
                     for (const psc of data.items) {
-                        const pscName = (psc.name || '').toLowerCase();
-                        const recordName = record.pscName.toLowerCase();
+                        // Clean names for comparison
+                        const chName = (psc.name || '').toUpperCase().replace(/[^A-Z]/g, '');
+                        const recordLastName = record.pscLastName.toUpperCase().replace(/[^A-Z]/g, '');
+                        const recordFirstName = record.pscFirstName.toUpperCase().replace(/[^A-Z]/g, '');
                         
-                        if (pscName.includes(recordName) || recordName.includes(pscName)) {
-                            found = true;
-                            
-                            const pscPostcode = (psc.address?.postal_code || '').replace(/\s/g, '');
-                            const recordPostcode = record.postcode.replace(/\s/g, '');
-                            
-                            if (pscPostcode.toLowerCase() === recordPostcode.toLowerCase()) {
-                                uploadedData[index].status = 'verified';
-                            } else {
-                                uploadedData[index].status = 'mismatch';
-                                document.getElementById(`acceptBtn${index}`).style.display = 'inline-block';
-                            }
-                            
-                            const addr = psc.address || {};
-                            const chAddress = `${addr.premises || ''} ${addr.address_line_1 || ''}<br>
-                                ${addr.locality || ''}, ${addr.postal_code || ''}`;
-                            document.getElementById(`chData${index}`).innerHTML = chAddress;
-                            break;
+                        // Calculate match score
+                        let score = 0;
+                        
+                        // Check if last name is in CH name
+                        if (recordLastName && chName.includes(recordLastName)) {
+                            score += 50;
+                        }
+                        
+                        // Check if first name is in CH name
+                        if (recordFirstName && chName.includes(recordFirstName)) {
+                            score += 30;
+                        }
+                        
+                        // Check postcode match
+                        const chPostcode = (psc.address?.postal_code || '').replace(/\s/g, '').toUpperCase();
+                        const recordPostcode = record.postcode.replace(/\s/g, '').toUpperCase();
+                        
+                        if (chPostcode && recordPostcode && chPostcode === recordPostcode) {
+                            score += 20;
+                        }
+                        
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = psc;
                         }
                     }
                     
-                    if (!found) {
-                        uploadedData[index].status = 'mismatch';
-                        document.getElementById(`chData${index}`).innerHTML = 'Person not found';
+                    if (bestMatch && bestScore >= 50) {
+                        // We found a likely match
+                        const chPostcode = (bestMatch.address?.postal_code || '').replace(/\s/g, '').toUpperCase();
+                        const recordPostcode = record.postcode.replace(/\s/g, '').toUpperCase();
+                        
+                        if (!chPostcode || chPostcode === recordPostcode) {
+                            uploadedData[index].status = 'verified';
+                        } else {
+                            uploadedData[index].status = 'mismatch';
+                            uploadedData[index].chData = bestMatch;
+                            document.getElementById(`acceptBtn${index}`).style.display = 'inline-block';
+                        }
+                        
+                        // Display Companies House address
+                        const addr = bestMatch.address || {};
+                        const chAddress = `${addr.premises || ''} ${addr.address_line_1 || ''}<br>
+                            ${addr.locality || ''}, ${addr.postal_code || ''}`;
+                        document.getElementById(`chData${index}`).innerHTML = chAddress;
+                    } else {
+                        // No good match found
+                        uploadedData[index].status = 'pending';
+                        document.getElementById(`chData${index}`).innerHTML = 'Manual check needed';
                     }
                 } else {
                     uploadedData[index].status = 'pending';
                     document.getElementById(`chData${index}`).innerHTML = 'No PSC data';
                 }
                 
-                const statusCell = document.querySelector(`#verifyTableBody tr:nth-child(${index + 1}) td:nth-child(6) span`);
-                if (statusCell) {
-                    statusCell.className = `status-badge ${getStatusClass(uploadedData[index].status)}`;
-                    statusCell.textContent = uploadedData[index].status;
-                }
+                updateStatusDisplay(index);
                 
             } catch (error) {
                 console.error('Verification error:', error);
                 uploadedData[index].status = 'pending';
                 document.getElementById(`chData${index}`).innerHTML = 'Error checking';
+                updateStatusDisplay(index);
+            }
+        }
+
+        function updateStatusDisplay(index) {
+            const statusCell = document.querySelector(`#verifyTableBody tr:nth-child(${index + 1}) td:nth-child(6) span`);
+            if (statusCell) {
+                statusCell.className = `status-badge ${getStatusClass(uploadedData[index].status)}`;
+                statusCell.textContent = uploadedData[index].status;
             }
         }
 
         function acceptCHData(index) {
-            uploadedData[index].addressLine1 = uploadedData[index].addressLine1 + ' (Updated)';
+            if (uploadedData[index].chData) {
+                const chData = uploadedData[index].chData;
+                const addr = chData.address || {};
+                
+                // Update with Companies House data
+                uploadedData[index].addressLine1 = addr.premises || addr.address_line_1 || uploadedData[index].addressLine1;
+                uploadedData[index].city = addr.locality || uploadedData[index].city;
+                uploadedData[index].postcode = addr.postal_code || uploadedData[index].postcode;
+                uploadedData[index].county = addr.region || uploadedData[index].county;
+            }
+            
             uploadedData[index].status = 'verified';
-            
-            const statusCell = document.querySelector(`#verifyTableBody tr:nth-child(${index + 1}) td:nth-child(6) span`);
-            statusCell.className = 'status-badge status-verified';
-            statusCell.textContent = 'verified';
-            
+            updateStatusDisplay(index);
             document.getElementById(`acceptBtn${index}`).style.display = 'none';
-            
             updateStats();
         }
 
         // ============================================
-        // LETTER GENERATION
+        // LETTER GENERATION - PROPER FORMATTING
         // ============================================
         function generateAllLetters() {
             const verifiedRecords = uploadedData.filter(r => r.status === 'verified');
@@ -1249,17 +1309,17 @@
                     <div style="text-align: right;">London Office</div>
                     
                     <div class="letter-address">
-                        ${record.pscTitle} ${record.pscName}<br>
+                        ${record.pscTitle} ${record.pscFirstName} ${record.pscLastName}<br>
                         ${record.addressLine1}<br>
                         ${record.addressLine2 ? record.addressLine2 + '<br>' : ''}
                         ${record.city}<br>
-                        ${record.county}<br>
+                        ${record.county ? record.county + '<br>' : ''}
                         ${record.postcode}
                     </div>
                     
                     <div class="letter-date">${today}</div>
                     
-                    <div>Dear ${record.pscTitle} ${record.pscName.split(' ').pop()},</div>
+                    <div>Dear ${record.pscTitle} ${record.pscLastName},</div>
                     
                     <div style="margin: 20px 0;">
                         <strong>Ref: ${record.reference}</strong>
@@ -1294,11 +1354,11 @@
             return `
                 <div class="envelope-preview">
                     <div class="envelope-address">
-                        ${record.pscTitle} ${record.pscName}<br>
+                        ${record.pscTitle} ${record.pscFirstName} ${record.pscLastName}<br>
                         ${record.addressLine1}<br>
                         ${record.addressLine2 ? record.addressLine2 + '<br>' : ''}
                         ${record.city}<br>
-                        ${record.county}<br>
+                        ${record.county ? record.county + '<br>' : ''}
                         ${record.postcode}
                     </div>
                 </div>
@@ -1313,7 +1373,7 @@
                 const letterDiv = document.createElement('div');
                 letterDiv.innerHTML = `
                     <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                        <h5>${letter.companyName} - ${letter.pscTitle} ${letter.pscName}</h5>
+                        <h5>${letter.companyName} - ${letter.pscTitle} ${letter.pscFirstName} ${letter.pscLastName}</h5>
                         <div class="action-buttons">
                             <button class="btn btn-primary" onclick="previewLetter(${index})">Preview Letter</button>
                             <button class="btn btn-warning" onclick="previewEnvelope(${index})">Preview Envelope</button>
@@ -1429,8 +1489,10 @@
             const report = uploadedData.map(record => ({
                 'Company Name': record.companyName,
                 'Company Number': record.companyNumber,
-                'PSC Name': `${record.pscTitle} ${record.pscName}`,
-                'Address': `${record.addressLine1}, ${record.city}, ${record.postcode}`,
+                'PSC Title': record.pscTitle,
+                'PSC First Name': record.pscFirstName,
+                'PSC Last Name': record.pscLastName,
+                'Full Address': `${record.addressLine1}, ${record.addressLine2 ? record.addressLine2 + ', ' : ''}${record.city}, ${record.county ? record.county + ', ' : ''}${record.postcode}`,
                 'Status': record.status,
                 'Reference': record.reference
             }));
@@ -1449,9 +1511,8 @@
         window.addEventListener('DOMContentLoaded', function() {
             checkAPIConnection();
             console.log('UK Business Outreach Automation System loaded');
-            console.log('Version: Netlify Ready');
+            console.log('Version: Final - Name Handling Fixed');
         });
     </script>
 </body>
-
 </html>
