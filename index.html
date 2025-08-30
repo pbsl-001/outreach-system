@@ -839,23 +839,24 @@
         
         async function checkAPIConnection() {
             try {
-                const response = await fetch(API_CONFIG.baseURL);
-                const data = await response.json();
-                
-                if (response.ok && data.status === 'working') {
-                    document.getElementById('apiStatus').className = 'api-status connected';
-                    document.getElementById('apiStatus').textContent = '✓ Companies House API Connected';
-                    console.log('✓ Companies House API connected');
-                    return true;
-                }
-            } catch (error) {
-                console.error('API connection failed:', error);
-            }
-            
-            document.getElementById('apiStatus').className = 'api-status error';
-            document.getElementById('apiStatus').textContent = '✗ API Connection Failed';
-            return false;
+        const response = await fetch(API_CONFIG.baseURL);
+        const data = await response.json();
+        
+        // Accept both 'working' and 'ready' status
+        if (response.ok && (data.status === 'working' || data.status === 'ready')) {
+            document.getElementById('apiStatus').className = 'api-status connected';
+            document.getElementById('apiStatus').textContent = '✓ Companies House API Connected';
+            console.log('✓ Companies House API connected');
+            return true;
         }
+    } catch (error) {
+        console.error('API connection failed:', error);
+    }
+    
+    document.getElementById('apiStatus').className = 'api-status error';
+    document.getElementById('apiStatus').textContent = '✗ API Connection Failed';
+    return false;
+    }
 
         async function testAPIConnection() {
             document.getElementById('apiStatus').textContent = 'Testing connection...';
@@ -2137,3 +2138,4 @@
     </script>
 </body>
 </html>
+
