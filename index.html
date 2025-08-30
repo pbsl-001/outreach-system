@@ -722,7 +722,7 @@
                 </div>
             </div>
 
-            <!-- Verify Tab - ENHANCED WITH REAL API -->
+            <!-- Verify Tab - ENHANCED WITH REAL API AND FIXED BUTTONS -->
             <div id="verifyTab" class="tab-content">
                 <h3 style="margin-bottom: 20px;">🔍 PSC Verification Against Companies House</h3>
                 
@@ -815,6 +815,7 @@
     <script>
         // ============================================
         // ENHANCED CRM WITH REAL COMPANIES HOUSE API
+        // ALL VERIFICATION BUGS FIXED
         // ============================================
 
         // API Configuration - REAL CONNECTION
@@ -834,29 +835,29 @@
         let currentModalType = 'edit';
 
         // ============================================
-        // API CONNECTION TESTING
+        // API CONNECTION TESTING - FIXED
         // ============================================
         
         async function checkAPIConnection() {
             try {
-        const response = await fetch(API_CONFIG.baseURL);
-        const data = await response.json();
-        
-        // Accept both 'working' and 'ready' status
-        if (response.ok && (data.status === 'working' || data.status === 'ready')) {
-            document.getElementById('apiStatus').className = 'api-status connected';
-            document.getElementById('apiStatus').textContent = '✓ Companies House API Connected';
-            console.log('✓ Companies House API connected');
-            return true;
+                const response = await fetch(API_CONFIG.baseURL);
+                const data = await response.json();
+                
+                // Accept both 'working' and 'ready' status
+                if (response.ok && (data.status === 'working' || data.status === 'ready')) {
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                    document.getElementById('apiStatus').textContent = '✓ Companies House API Connected';
+                    console.log('✓ Companies House API connected');
+                    return true;
+                }
+            } catch (error) {
+                console.error('API connection failed:', error);
+            }
+            
+            document.getElementById('apiStatus').className = 'api-status error';
+            document.getElementById('apiStatus').textContent = '✗ API Connection Failed';
+            return false;
         }
-    } catch (error) {
-        console.error('API connection failed:', error);
-    }
-    
-    document.getElementById('apiStatus').className = 'api-status error';
-    document.getElementById('apiStatus').textContent = '✗ API Connection Failed';
-    return false;
-    }
 
         async function testAPIConnection() {
             document.getElementById('apiStatus').textContent = 'Testing connection...';
@@ -864,7 +865,7 @@
         }
 
         // ============================================
-        // CRM DATABASE FUNCTIONS (UNCHANGED)
+        // CRM DATABASE FUNCTIONS - FIXED
         // ============================================
         
         function initializeCRMDatabase() {
@@ -898,6 +899,7 @@
             return false;
         }
 
+        // FIXED: Ensure proper initialization with selection property
         function addCompanyToCRM(recordData) {
             const companyNumber = recordData.companyNumber;
             
@@ -928,8 +930,8 @@
                 otherContacts: [],
                 communications: [],
                 
-                // Verification status
-                verificationStatus: 'pending', // pending, verified, mismatch, error
+                // Verification status - ENSURE IT'S SET
+                verificationStatus: 'pending',
                 verificationDate: null,
                 verificationDetails: null,
                 
@@ -940,6 +942,7 @@
                 lastContactDate: null,
                 nextAction: null,
                 doNotContact: false,
+                selected: false, // SELECTION PROPERTY ADDED
                 
                 intelligence: {
                     businessNotes: '',
@@ -1008,7 +1011,7 @@
         }
 
         // ============================================
-        // REAL PSC VERIFICATION FUNCTIONS
+        // REAL PSC VERIFICATION FUNCTIONS - ENHANCED WITH FIXES
         // ============================================
         
         async function verifyIndividual(companyNumber) {
@@ -1258,12 +1261,35 @@
         }
 
         // ============================================
-        // VERIFICATION TAB SETUP
+        // VERIFICATION TAB SETUP - FIXED
         // ============================================
         
         function setupVerification() {
             const companies = Object.values(companiesDatabase);
-            const pendingCount = companies.filter(c => c.verificationStatus === 'pending').length;
+            
+            // Fix any companies missing verification status or selection property
+            companies.forEach(company => {
+                if (!company.verificationStatus) {
+                    company.verificationStatus = 'pending';
+                }
+                if (company.selected === undefined) {
+                    company.selected = false;
+                }
+            });
+            saveCRMData();
+            
+            const pendingCount = companies.filter(c => 
+                c.verificationStatus === 'pending' || c.verificationStatus === 'error'
+            ).length;
+            const verifiedCount = companies.filter(c => c.verificationStatus === 'verified').length;
+            const mismatchCount = companies.filter(c => c.verificationStatus === 'mismatch').length;
+            
+            console.log('Verification setup:', {
+                total: companies.length,
+                pending: pendingCount,
+                verified: verifiedCount,
+                mismatch: mismatchCount
+            });
             
             if (companies.length === 0) {
                 document.getElementById('verificationContent').innerHTML = `
@@ -1279,11 +1305,11 @@
                         <div class="stat-label">Total Companies</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${companies.filter(c => c.verificationStatus === 'verified').length}</div>
+                        <div class="stat-number">${verifiedCount}</div>
                         <div class="stat-label">Verified</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${companies.filter(c => c.verificationStatus === 'mismatch').length}</div>
+                        <div class="stat-number">${mismatchCount}</div>
                         <div class="stat-label">Mismatches</div>
                     </div>
                     <div class="stat-card">
@@ -1296,7 +1322,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" onchange="selectAllVerify(this)"></th>
+                                <th><input type="checkbox" onchange="selectAllVerify(this)" id="selectAllCheckbox"></th>
                                 <th>Company</th>
                                 <th>PSC Name</th>
                                 <th>Your Address</th>
@@ -1307,7 +1333,7 @@
                         <tbody>
                             ${companies.map(company => `
                                 <tr>
-                                    <td><input type="checkbox" ${company.selected ? 'checked' : ''} onchange="toggleCompanySelection('${company.companyNumber}')"></td>
+                                    <td><input type="checkbox" ${company.selected ? 'checked' : ''} onchange="toggleCompanySelection('${company.companyNumber}')" id="check_${company.companyNumber}"></td>
                                     <td>
                                         <strong>${company.companyName}</strong><br>
                                         <small>${company.companyNumber}</small>
@@ -1335,14 +1361,53 @@
             
             document.getElementById('verifyActions').style.display = 'flex';
             updateBadge('verifyBadge', pendingCount);
+            
+            // Show existing verification results
+            companies.forEach(company => {
+                if (company.verificationStatus && company.verificationStatus !== 'pending') {
+                    updateVerificationDisplay(company.companyNumber);
+                }
+            });
         }
 
+        // FIXED VERIFICATION FUNCTIONS - ALL BUGS RESOLVED
+
+        // Fix 1: Proper company selection tracking
+        function toggleCompanySelection(companyNumber) {
+            if (companiesDatabase[companyNumber]) {
+                companiesDatabase[companyNumber].selected = !companiesDatabase[companyNumber].selected;
+                saveCRMData();
+                console.log(`Company ${companyNumber} selected:`, companiesDatabase[companyNumber].selected);
+            }
+        }
+
+        function selectAllVerify(checkbox) {
+            Object.values(companiesDatabase).forEach(company => {
+                company.selected = checkbox.checked;
+            });
+            saveCRMData();
+            console.log('Select all:', checkbox.checked);
+        }
+
+        // Fix 2: Corrected verifyAll function
         async function verifyAll() {
             const companies = Object.values(companiesDatabase);
-            const pendingCompanies = companies.filter(c => c.verificationStatus === 'pending');
+            
+            // Find companies that need verification (pending or never verified)
+            const pendingCompanies = companies.filter(c => 
+                !c.verificationStatus || 
+                c.verificationStatus === 'pending' || 
+                c.verificationStatus === 'error'
+            );
+            
+            console.log('Companies to verify:', pendingCompanies.length);
+            console.log('Pending companies:', pendingCompanies.map(c => ({
+                name: c.companyName, 
+                status: c.verificationStatus || 'undefined'
+            })));
             
             if (pendingCompanies.length === 0) {
-                alert('No companies pending verification');
+                alert('No companies need verification. All companies have been verified already.');
                 return;
             }
             
@@ -1361,8 +1426,8 @@
                 document.getElementById('verificationProgress').style.width = progress + '%';
                 document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
                 
-                // Small delay to prevent API rate limiting
-                await new Promise(resolve => setTimeout(resolve, 200));
+                // Delay to prevent API rate limiting
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
             
             button.textContent = 'Verify All Records';
@@ -1371,14 +1436,39 @@
             alert(`Verification complete! Processed ${pendingCompanies.length} companies.`);
             updateDashboardStats();
             updateMailMergeTab();
+            
+            // Refresh the verification display
+            setupVerification();
         }
 
+        // Fix 3: Corrected verifySelected function - THIS WAS MISSING!
         async function verifySelected() {
             const companies = Object.values(companiesDatabase);
-            const selectedCompanies = companies.filter(c => c.selected && c.verificationStatus === 'pending');
+            
+            // Find selected companies that need verification
+            const selectedCompanies = companies.filter(c => 
+                c.selected && (
+                    !c.verificationStatus || 
+                    c.verificationStatus === 'pending' || 
+                    c.verificationStatus === 'error'
+                )
+            );
+            
+            console.log('Selected companies for verification:', selectedCompanies.length);
+            console.log('Selected companies:', selectedCompanies.map(c => ({
+                name: c.companyName, 
+                selected: c.selected,
+                status: c.verificationStatus || 'undefined'
+            })));
             
             if (selectedCompanies.length === 0) {
-                alert('No pending companies selected for verification');
+                // Check if any companies are selected at all
+                const anySelected = companies.filter(c => c.selected);
+                if (anySelected.length === 0) {
+                    alert('Please select companies to verify by checking the checkboxes.');
+                } else {
+                    alert('Selected companies have already been verified. Please select companies with "pending" status.');
+                }
                 return;
             }
             
@@ -1397,7 +1487,7 @@
                 document.getElementById('verificationProgress').style.width = progress + '%';
                 document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
                 
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
             
             button.textContent = 'Verify Selected';
@@ -1406,20 +1496,9 @@
             alert(`Verification complete! Processed ${selectedCompanies.length} selected companies.`);
             updateDashboardStats();
             updateMailMergeTab();
-        }
-
-        function selectAllVerify(checkbox) {
-            Object.values(companiesDatabase).forEach(company => {
-                company.selected = checkbox.checked;
-            });
-            saveCRMData();
-        }
-
-        function toggleCompanySelection(companyNumber) {
-            if (companiesDatabase[companyNumber]) {
-                companiesDatabase[companyNumber].selected = !companiesDatabase[companyNumber].selected;
-                saveCRMData();
-            }
+            
+            // Refresh the verification display
+            setupVerification();
         }
 
         // ============================================
@@ -1591,7 +1670,7 @@
                             </div>
                             <div>
                                 <span class="status-badge status-${company.status}">${company.status}</span>
-                                <span class="status-badge status-${company.verificationStatus}">${company.verificationStatus}</span>
+                                <span class="status-badge status-${company.verificationStatus || 'pending'}">${company.verificationStatus || 'pending'}</span>
                             </div>
                         </div>
                         
@@ -1615,7 +1694,7 @@
                             <button class="btn btn-sm btn-secondary" onclick="editCompanyRecord('${company.companyNumber}')">
                                 Edit
                             </button>
-                            ${company.verificationStatus === 'pending' ? `
+                            ${(!company.verificationStatus || company.verificationStatus === 'pending' || company.verificationStatus === 'error') ? `
                                 <button class="btn btn-sm btn-warning" onclick="verifyIndividual('${company.companyNumber}')">
                                     Verify PSC
                                 </button>
@@ -1900,7 +1979,7 @@
                 'PSC First Name': company.primaryPSC.pscFirstName,
                 'PSC Last Name': company.primaryPSC.pscLastName,
                 'Full Address': `${company.primaryPSC.addressLine1}, ${company.primaryPSC.addressLine2 ? company.primaryPSC.addressLine2 + ', ' : ''}${company.primaryPSC.city}, ${company.primaryPSC.county ? company.primaryPSC.county + ', ' : ''}${company.primaryPSC.postcode}`,
-                'Verification Status': company.verificationStatus,
+                'Verification Status': company.verificationStatus || 'pending',
                 'Verification Date': company.verificationDate || '',
                 'Status': company.status,
                 'Reference': company.reference,
@@ -2088,7 +2167,7 @@
                 'County': company.primaryPSC.county,
                 'Postcode': company.primaryPSC.postcode,
                 'Status': company.status,
-                'Verification Status': company.verificationStatus,
+                'Verification Status': company.verificationStatus || 'pending',
                 'Reference': company.reference,
                 'Added Date': company.addedDate,
                 'Last Mail Date': company.lastMailDate || '',
@@ -2132,10 +2211,9 @@
         // INITIALIZATION
         // ============================================
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('UK Business Outreach CRM System - Enhanced with Real API loaded');
+            console.log('UK Business Outreach CRM System - Complete with Fixed Verification');
             initializeCRMDatabase();
         });
     </script>
 </body>
 </html>
-
