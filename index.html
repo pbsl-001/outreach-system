@@ -1100,38 +1100,32 @@
         }
 
         function findBestPSCMatch(yourPSC, chPSCs) {
-            let bestMatch = { psc: null, score: 0 };
-            
-            for (const psc of chPSCs) {
-                let score = 0;
-                const chName = (psc.name || '').toUpperCase().replace(/[^A-Z]/g, '');
-                const yourLastName = yourPSC.pscLastName.toUpperCase().replace(/[^A-Z]/g, '');
-                const yourFirstName = yourPSC.pscFirstName.toUpperCase().replace(/[^A-Z]/g, '');
-                
-                // Name matching
-                if (yourLastName && chName.includes(yourLastName)) {
-                    score += 50;
-                }
-                
-                if (yourFirstName && chName.includes(yourFirstName)) {
-                    score += 30;
-                }
-                
-                // Postcode matching (high weight)
-                const chPostcode = (psc.address?.postal_code || '').replace(/\s/g, '').toUpperCase();
-                const yourPostcode = yourPSC.postcode.replace(/\s/g, '').toUpperCase();
-                
-                if (chPostcode && yourPostcode && chPostcode === yourPostcode) {
-                    score += 40;
-                }
-                
-                if (score > bestMatch.score) {
-                    bestMatch = { psc, score };
-                }
-            }
-            
-            return bestMatch;
+        let bestMatch = { psc: null, score: 0 };
+        
+        for (const psc of chPSCs) {
+        let score = 0;
+        const chName = (psc.name || '').toUpperCase();
+        const yourLastName = yourPSC.pscLastName.toUpperCase();
+        
+        // Simple string matching without regex
+        if (chName.includes(yourLastName)) {
+            score += 50;
         }
+        
+        const chPostcode = (psc.address?.postal_code || '').replace(/\s/g, '').toUpperCase();
+        const yourPostcode = yourPSC.postcode.replace(/\s/g, '').toUpperCase();
+        
+        if (chPostcode === yourPostcode) {
+            score += 40;
+        }
+        
+        if (score > bestMatch.score) {
+            bestMatch = { psc, score };
+        }
+    }
+    
+    return bestMatch;
+}
 
         function compareAddresses(yourPSC, chAddress) {
             let score = 0;
@@ -2320,4 +2314,5 @@ function setupVerification() {
     </script>
 </body>
 </html>
+
 
