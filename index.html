@@ -420,18 +420,6 @@
             background: #fffbf0;
         }
 
-        .duplicate-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .duplicate-item:last-child {
-            border-bottom: none;
-        }
-
         .company-search {
             margin-bottom: 20px;
         }
@@ -562,31 +550,6 @@
             background: #f8d7da;
             border: 1px solid #f5c6cb;
             color: #721c24;
-        }
-
-        .comparison-table {
-            font-size: 0.85rem;
-            margin: 10px 0;
-        }
-
-        .comparison-table td {
-            padding: 5px 10px;
-            border: 1px solid #dee2e6;
-            vertical-align: top;
-        }
-
-        .comparison-table .label {
-            background: #f8f9fa;
-            font-weight: 600;
-            width: 100px;
-        }
-
-        .comparison-table .your-data {
-            background: #fff3cd;
-        }
-
-        .comparison-table .ch-data {
-            background: #d1ecf1;
         }
     </style>
 </head>
@@ -722,7 +685,7 @@
                 </div>
             </div>
 
-            <!-- Verify Tab - ENHANCED WITH REAL API AND FIXED BUTTONS -->
+            <!-- Verify Tab -->
             <div id="verifyTab" class="tab-content">
                 <h3 style="margin-bottom: 20px;">🔍 PSC Verification Against Companies House</h3>
                 
@@ -814,16 +777,16 @@
 
     <script>
         // ============================================
-        // ENHANCED CRM WITH REAL COMPANIES HOUSE API
-        // ALL VERIFICATION BUGS FIXED
+        // CORRECTED CRM WITH COMPANIES HOUSE API
+        // NO REGEX SYNTAX ERRORS
         // ============================================
 
-        // API Configuration - REAL CONNECTION
+        // API Configuration
         const API_CONFIG = {
             baseURL: window.location.hostname === 'localhost' 
                 ? 'http://localhost:8888/.netlify/functions/companies-house'
                 : '/.netlify/functions/companies-house',
-            demoMode: false // Now using real API
+            demoMode: false
         };
 
         // Global data storage
@@ -835,7 +798,60 @@
         let currentModalType = 'edit';
 
         // ============================================
-        // API CONNECTION TESTING - FIXED
+        // UTILITY FUNCTIONS
+        // ============================================
+        
+        function formatCompleteAddress(record) {
+            const parts = [];
+            if (record.addressLine1 && record.addressLine1.trim()) parts.push(record.addressLine1.trim());
+            if (record.addressLine2 && record.addressLine2.trim()) parts.push(record.addressLine2.trim());
+            if (record.city && record.city.trim()) parts.push(record.city.trim());
+            if (record.county && record.county.trim()) parts.push(record.county.trim());
+            if (record.postcode && record.postcode.trim()) parts.push(record.postcode.trim());
+            return parts.join(', ');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const tabs = ['upload', 'companies', 'verify', 'merge', 'print'];
+            const tabIndex = tabs.indexOf(tabName);
+            document.querySelectorAll('.nav-tab')[tabIndex].classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            if (tabName === 'companies') {
+                updateDashboardStats();
+                displayCompanies();
+            } else if (tabName === 'merge') {
+                updateMailMergeTab();
+            } else if (tabName === 'verify') {
+                setupVerification();
+            }
+        }
+
+        function updateBadge(badgeId, count) {
+            const badge = document.getElementById(badgeId);
+            if (count > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = count;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function generateReference() {
+            const prefix = 'HD';
+            const number = Math.floor(100000 + Math.random() * 900000);
+            return `${prefix}/${number}`;
+        }
+
+        function proceedToVerification() {
+            switchTab('verify');
+        }
+
+        // ============================================
+        // API CONNECTION TESTING
         // ============================================
         
         async function checkAPIConnection() {
@@ -843,7 +859,6 @@
                 const response = await fetch(API_CONFIG.baseURL);
                 const data = await response.json();
                 
-                // Accept both 'working' and 'ready' status
                 if (response.ok && (data.status === 'working' || data.status === 'ready')) {
                     document.getElementById('apiStatus').className = 'api-status connected';
                     document.getElementById('apiStatus').textContent = '✓ Companies House API Connected';
@@ -865,7 +880,7 @@
         }
 
         // ============================================
-        // CRM DATABASE FUNCTIONS - FIXED
+        // CRM DATABASE FUNCTIONS
         // ============================================
         
         function initializeCRMDatabase() {
@@ -899,7 +914,6 @@
             return false;
         }
 
-        // FIXED: Ensure proper initialization with selection property
         function addCompanyToCRM(recordData) {
             const companyNumber = recordData.companyNumber;
             
@@ -930,7 +944,6 @@
                 otherContacts: [],
                 communications: [],
                 
-                // Verification status - ENSURE IT'S SET
                 verificationStatus: 'pending',
                 verificationDate: null,
                 verificationDetails: null,
@@ -942,7 +955,7 @@
                 lastContactDate: null,
                 nextAction: null,
                 doNotContact: false,
-                selected: false, // SELECTION PROPERTY ADDED
+                selected: false,
                 
                 intelligence: {
                     businessNotes: '',
@@ -1011,644 +1024,119 @@
         }
 
         // ============================================
-        // REAL PSC VERIFICATION FUNCTIONS - ENHANCED WITH FIXES
+        // UPLOAD PROCESSING - FIXED ADDRESS DISPLAY
         // ============================================
         
-        async function verifyIndividual(companyNumber) {
-            const company = companiesDatabase[companyNumber];
-            if (!company) return false;
-
-            try {
-                console.log(`Verifying company: ${companyNumber}`);
-                
-                // Call Companies House API for PSC data
-                const response = await fetch(`${API_CONFIG.baseURL}/psc/${companyNumber}`);
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    company.verificationStatus = 'error';
-                    company.verificationDetails = {
-                        error: errorData.error || 'Company not found',
-                        date: new Date().toISOString().split('T')[0]
-                    };
+        function processUploadedData(data) {
+            console.log('Processing uploaded data...');
+            console.log('First row raw data:', data[0]);
+            console.log('Available columns:', Object.keys(data[0] || {}));
+            
+            uploadedData = data.map((row, index) => {
+                const record = {
+                    id: index + 1,
+                    companyName: row['Company Name'] || row['company_name'] || '',
+                    companyNumber: row['Company Number'] || row['company_number'] || '',
+                    pscTitle: row['PSC Title'] || row['Title'] || 'Mr',
+                    pscFirstName: row['PSC First Name'] || row['PSC_First_Name'] || '',
+                    pscLastName: row['PSC Last Name'] || row['PSC_Last_Name'] || '',
+                    pscFullName: ((row['PSC First Name'] || '') + ' ' + (row['PSC Last Name'] || '')).trim(),
                     
-                    updateVerificationDisplay(companyNumber);
-                    saveCRMData();
-                    return false;
-                }
-
-                const data = await response.json();
-                
-                if (!data.items || data.items.length === 0) {
-                    company.verificationStatus = 'error';
-                    company.verificationDetails = {
-                        error: 'No PSC data found',
-                        date: new Date().toISOString().split('T')[0]
-                    };
+                    // ENHANCED: Try multiple column name variations
+                    addressLine1: row['PSC Address1'] || row['PSC_Address1'] || row['Address Line 1'] || row['PSC 1'] || '',
+                    addressLine2: row['PSC Address2'] || row['PSC_Address2'] || row['Address Line 2'] || row['PSC 2'] || '',
+                    city: row['PSC Address3'] || row['PSC_Address3'] || row['City'] || row['PSC 3'] || '',
+                    county: row['PSC Address4'] || row['PSC_Address4'] || row['County'] || row['PSC 4'] || '',
+                    postcode: row['PSC Postcode'] || row['PSC_Postcode'] || row['Postcode'] || '',
                     
-                    updateVerificationDisplay(companyNumber);
-                    saveCRMData();
-                    return false;
-                }
-
-                // Find best PSC match
-                const bestMatch = findBestPSCMatch(company.primaryPSC, data.items);
-                
-                if (!bestMatch.psc) {
-                    company.verificationStatus = 'error';
-                    company.verificationDetails = {
-                        error: 'No matching PSC found',
-                        date: new Date().toISOString().split('T')[0],
-                        availablePSCs: data.items.map(psc => ({
-                            name: psc.name,
-                            address: psc.address
-                        }))
-                    };
-                } else {
-                    // Determine if it's a match or mismatch
-                    const addressMatch = compareAddresses(company.primaryPSC, bestMatch.psc.address);
-                    
-                    company.verificationStatus = (bestMatch.score > 70 && addressMatch.score > 60) ? 'verified' : 'mismatch';
-                    company.verificationDetails = {
-                        date: new Date().toISOString().split('T')[0],
-                        matchScore: bestMatch.score,
-                        matchedPSC: bestMatch.psc,
-                        addressComparison: addressMatch,
-                        canUpdate: bestMatch.score > 50 // Allow updates for reasonable matches
-                    };
-                }
-
-                company.verificationDate = new Date().toISOString().split('T')[0];
-                updateVerificationDisplay(companyNumber);
-                saveCRMData();
-                
-                return true;
-
-            } catch (error) {
-                console.error(`Verification failed for ${companyNumber}:`, error);
-                
-                company.verificationStatus = 'error';
-                company.verificationDetails = {
-                    error: error.message,
-                    date: new Date().toISOString().split('T')[0]
+                    reference: row['Reference'] || row['reference'] || generateReference(),
+                    industry: row['Industry'] || '',
+                    turnover: row['Turnover'] || '',
+                    status: 'pending',
+                    selected: false,
+                    inDatabase: companiesDatabase[row['Company Number']] ? true : false,
+                    lastContact: companiesDatabase[row['Company Number']] ? companiesDatabase[row['Company Number']].lastMailDate : null
                 };
                 
-                updateVerificationDisplay(companyNumber);
-                saveCRMData();
-                return false;
-            }
-        }
-
-        function findBestPSCMatch(yourPSC, chPSCs) {
-        let bestMatch = { psc: null, score: 0 };
-        
-        for (const psc of chPSCs) {
-        let score = 0;
-        const chName = (psc.name || '').toUpperCase();
-        const yourLastName = yourPSC.pscLastName.toUpperCase();
-        
-        // Simple string matching without regex
-        if (chName.includes(yourLastName)) {
-            score += 50;
-        }
-        
-        const chPostcode = (psc.address?.postal_code || '').replace(/\s/g, '').toUpperCase();
-        const yourPostcode = yourPSC.postcode.replace(/\s/g, '').toUpperCase();
-        
-        if (chPostcode === yourPostcode) {
-            score += 40;
-        }
-        
-        if (score > bestMatch.score) {
-            bestMatch = { psc, score };
-        }
-    }
-    
-    return bestMatch;
-}
-
-        function compareAddresses(yourPSC, chAddress) {
-            let score = 0;
-            let details = {};
-            
-            if (!chAddress) return { score: 0, details: {} };
-            
-            // Postcode comparison (highest weight)
-            const yourPostcode = yourPSC.postcode.replace(/\s/g, '').toUpperCase();
-            const chPostcode = (chAddress.postal_code || '').replace(/\s/g, '').toUpperCase();
-            
-            if (yourPostcode === chPostcode) {
-                score += 40;
-                details.postcode = 'match';
-            } else {
-                details.postcode = 'different';
-            }
-            
-            // City comparison
-            const yourCity = yourPSC.city.toUpperCase();
-            const chCity = (chAddress.locality || '').toUpperCase();
-            
-            if (yourCity === chCity) {
-                score += 20;
-                details.city = 'match';
-            } else {
-                details.city = 'different';
-            }
-            
-            // Address line comparison (basic)
-            const yourAddress = yourPSC.addressLine1.toUpperCase();
-            const chAddress1 = (chAddress.address_line_1 || '').toUpperCase();
-            
-            if (yourAddress.includes(chAddress1) || chAddress1.includes(yourAddress)) {
-                score += 20;
-                details.addressLine = 'similar';
-            } else {
-                details.addressLine = 'different';
-            }
-            
-            return { score, details };
-        }
-
-        // Fix 5: Enhanced verification display with proper CH address mapping
-function updateVerificationDisplay(companyNumber) {
-    const company = companiesDatabase[companyNumber];
-    const resultDiv = document.getElementById(`verifyResult_${companyNumber}`);
-    
-    if (!resultDiv) return;
-    
-    let html = '';
-    
-    switch (company.verificationStatus) {
-        case 'verified':
-            html = `
-                <div class="verification-result verified">
-                    <strong>✓ Verified</strong> - PSC details match Companies House records
-                    <div style="margin-top: 10px; font-size: 0.85rem;">
-                        <strong>Verified Address:</strong> ${formatCompleteAddress(company.primaryPSC)}
-                    </div>
-                </div>
-            `;
-            break;
-            
-        case 'mismatch':
-            const details = company.verificationDetails;
-            const yourAddress = formatCompleteAddress(company.primaryPSC);
-            
-            // Build Companies House address properly
-            const chAddr = details.matchedPSC.address;
-            const chParts = [
-                chAddr.care_of,
-                chAddr.po_box, 
-                chAddr.premises,
-                chAddr.address_line_1,
-                chAddr.address_line_2,
-                chAddr.locality,
-                chAddr.region,
-                chAddr.postal_code
-            ].filter(part => part && part.trim());
-            const chAddress = chParts.join(', ');
-            
-            html = `
-                <div class="verification-result mismatch">
-                    <strong>⚠️ Address Mismatch</strong> - PSC found but address differs
-                    
-                    <div style="margin: 10px 0; font-size: 0.9rem;">
-                        <div><strong>Your Complete Address:</strong></div>
-                        <div style="background: #fff3cd; padding: 5px; border-radius: 3px; margin: 3px 0;">
-                            ${yourAddress}
-                        </div>
-                        
-                        <div><strong>Companies House Address:</strong></div>
-                        <div style="background: #d1ecf1; padding: 5px; border-radius: 3px; margin: 3px 0;">
-                            ${chAddress}
-                        </div>
-                    </div>
-                    
-                    <div style="font-size: 0.85rem; margin: 10px 0;">
-                        <strong>Component Breakdown:</strong><br>
-                        <div style="margin: 5px 0;">
-                            <strong>Your Data:</strong> 1:"${company.primaryPSC.addressLine1}" | 2:"${company.primaryPSC.addressLine2 || ''}" | 3:"${company.primaryPSC.city}" | 4:"${company.primaryPSC.county || ''}" | PC:"${company.primaryPSC.postcode}"
-                        </div>
-                        <div style="margin: 5px 0;">
-                            <strong>Companies House:</strong> Premises:"${chAddr.premises || ''}" | Line1:"${chAddr.address_line_1 || ''}" | Line2:"${chAddr.address_line_2 || ''}" | Locality:"${chAddr.locality || ''}" | Region:"${chAddr.region || ''}" | PC:"${chAddr.postal_code || ''}"
-                        </div>
-                    </div>
-                    
-                    ${details.canUpdate ? `
-                        <button class="btn btn-sm btn-warning" onclick="updateWithCHData('${companyNumber}')" style="margin-top: 10px;">
-                            Update with CH Data
-                        </button>
-                    ` : ''}
-                </div>
-            `;
-            break;
-            
-        case 'error':
-            html = `
-                <div class="verification-result error">
-                    <strong>✗ Error:</strong> ${company.verificationDetails.error}
-                    ${company.verificationDetails.availablePSCs ? `
-                        <div style="margin-top: 10px; font-size: 0.85rem;">
-                            <strong>Available PSCs found:</strong><br>
-                            ${company.verificationDetails.availablePSCs.map(psc => {
-                                const addr = psc.address;
-                                const parts = [addr.premises, addr.address_line_1, addr.address_line_2, addr.locality, addr.region, addr.postal_code].filter(p => p && p.trim());
-                                return `• ${psc.name} - ${parts.join(', ')}`;
-                            }).join('<br>')}
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            break;
-            
-        default:
-            html = `<div>Verifying...</div>`;
-    }
-    
-    resultDiv.innerHTML = html;
-}
-
-        function updateWithCHData(companyNumber) {
-            const company = companiesDatabase[companyNumber];
-            const chPSC = company.verificationDetails.matchedPSC;
-            
-            if (!chPSC || !chPSC.address) return;
-            
-            // Update PSC address with Companies House data
-            company.primaryPSC.addressLine1 = chPSC.address.premises || chPSC.address.address_line_1 || company.primaryPSC.addressLine1;
-            company.primaryPSC.city = chPSC.address.locality || company.primaryPSC.city;
-            company.primaryPSC.postcode = chPSC.address.postal_code || company.primaryPSC.postcode;
-            company.primaryPSC.county = chPSC.address.region || company.primaryPSC.county;
-            
-            // Update verification status
-            company.verificationStatus = 'verified';
-            company.verificationDetails.updated = true;
-            
-            saveCRMData();
-            updateVerificationDisplay(companyNumber);
-            updateDashboardStats();
-            
-            alert('Address updated with Companies House data');
-        }
-
-        // ============================================
-        // VERIFICATION TAB SETUP - FIXED
-        // ============================================
-        
-       / Fix 4: Enhanced setupVerification with complete addresses
-function setupVerification() {
-    const companies = Object.values(companiesDatabase);
-    
-    // Fix any companies missing verification status or selection property
-    companies.forEach(company => {
-        if (!company.verificationStatus) {
-            company.verificationStatus = 'pending';
-        }
-        if (company.selected === undefined) {
-            company.selected = false;
-        }
-    });
-    saveCRMData();
-    
-    const pendingCount = companies.filter(c => 
-        c.verificationStatus === 'pending' || c.verificationStatus === 'error'
-    ).length;
-    const verifiedCount = companies.filter(c => c.verificationStatus === 'verified').length;
-    const mismatchCount = companies.filter(c => c.verificationStatus === 'mismatch').length;
-    
-    if (companies.length === 0) {
-        document.getElementById('verificationContent').innerHTML = `
-            <p style="color: #6c757d; margin: 20px 0;">No companies in database. Please add companies first.</p>
-        `;
-        return;
-    }
-    
-    document.getElementById('verificationContent').innerHTML = `
-        <div class="stats-grid" style="margin-bottom: 20px;">
-            <div class="stat-card">
-                <div class="stat-number">${companies.length}</div>
-                <div class="stat-label">Total Companies</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">${verifiedCount}</div>
-                <div class="stat-label">Verified</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">${mismatchCount}</div>
-                <div class="stat-label">Mismatches</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">${pendingCount}</div>
-                <div class="stat-label">Pending</div>
-            </div>
-        </div>
-        
-        <div style="overflow-x: auto;">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" onchange="selectAllVerify(this)" id="selectAllCheckbox"></th>
-                        <th>Company</th>
-                        <th>PSC Name</th>
-                        <th>Complete Address</th>
-                        <th>Verification Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${companies.map(company => {
-                        const completeAddress = formatCompleteAddress(company.primaryPSC);
-                        return `
-                        <tr>
-                            <td><input type="checkbox" ${company.selected ? 'checked' : ''} onchange="toggleCompanySelection('${company.companyNumber}')" id="check_${company.companyNumber}"></td>
-                            <td>
-                                <strong>${company.companyName}</strong><br>
-                                <small>${company.companyNumber}</small>
-                            </td>
-                            <td>${company.primaryPSC.pscTitle} ${company.primaryPSC.pscFullName}</td>
-                            <td style="max-width: 250px; word-wrap: break-word;">
-                                <div>${completeAddress}</div>
-                                <small style="color: #6c757d;">
-                                    1:"${company.primaryPSC.addressLine1}" | 2:"${company.primaryPSC.addressLine2 || ''}" | 
-                                    3:"${company.primaryPSC.city}" | 4:"${company.primaryPSC.county || ''}" | 
-                                    PC:"${company.primaryPSC.postcode}"
-                                </small>
-                            </td>
-                            <td>
-                                <span class="status-badge status-${company.verificationStatus}">${company.verificationStatus}</span>
-                                <div id="verifyResult_${company.companyNumber}"></div>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="verifyIndividual('${company.companyNumber}')">
-                                    Verify
-                                </button>
-                            </td>
-                        </tr>
-                    `;}).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    document.getElementById('verifyActions').style.display = 'flex';
-    updateBadge('verifyBadge', pendingCount);
-    
-    // Show existing verification results
-    companies.forEach(company => {
-        if (company.verificationStatus && company.verificationStatus !== 'pending') {
-            updateVerificationDisplay(company.companyNumber);
-        }
-    });
-}
-
-        // FIXED VERIFICATION FUNCTIONS - ALL BUGS RESOLVED
-
-        // Fix 1: Proper company selection tracking
-        function toggleCompanySelection(companyNumber) {
-            if (companiesDatabase[companyNumber]) {
-                companiesDatabase[companyNumber].selected = !companiesDatabase[companyNumber].selected;
-                saveCRMData();
-                console.log(`Company ${companyNumber} selected:`, companiesDatabase[companyNumber].selected);
-            }
-        }
-
-        function selectAllVerify(checkbox) {
-            Object.values(companiesDatabase).forEach(company => {
-                company.selected = checkbox.checked;
-            });
-            saveCRMData();
-            console.log('Select all:', checkbox.checked);
-        }
-
-        // Fix 2: Corrected verifyAll function
-        async function verifyAll() {
-            const companies = Object.values(companiesDatabase);
-            
-            // Find companies that need verification (pending or never verified)
-            const pendingCompanies = companies.filter(c => 
-                !c.verificationStatus || 
-                c.verificationStatus === 'pending' || 
-                c.verificationStatus === 'error'
-            );
-            
-            console.log('Companies to verify:', pendingCompanies.length);
-            console.log('Pending companies:', pendingCompanies.map(c => ({
-                name: c.companyName, 
-                status: c.verificationStatus || 'undefined'
-            })));
-            
-            if (pendingCompanies.length === 0) {
-                alert('No companies need verification. All companies have been verified already.');
-                return;
-            }
-            
-            const button = document.getElementById('verifyBtnText');
-            const spinner = document.getElementById('verifySpinner');
-            
-            button.textContent = 'Verifying...';
-            spinner.style.display = 'inline-block';
-            
-            let completed = 0;
-            for (const company of pendingCompanies) {
-                await verifyIndividual(company.companyNumber);
-                completed++;
-                
-                const progress = (completed / pendingCompanies.length) * 100;
-                document.getElementById('verificationProgress').style.width = progress + '%';
-                document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
-                
-                // Delay to prevent API rate limiting
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-            
-            button.textContent = 'Verify All Records';
-            spinner.style.display = 'none';
-            
-            alert(`Verification complete! Processed ${pendingCompanies.length} companies.`);
-            updateDashboardStats();
-            updateMailMergeTab();
-            
-            // Refresh the verification display
-            setupVerification();
-        }
-
-        // Fix 3: Corrected verifySelected function - THIS WAS MISSING!
-        async function verifySelected() {
-            const companies = Object.values(companiesDatabase);
-            
-            // Find selected companies that need verification
-            const selectedCompanies = companies.filter(c => 
-                c.selected && (
-                    !c.verificationStatus || 
-                    c.verificationStatus === 'pending' || 
-                    c.verificationStatus === 'error'
-                )
-            );
-            
-            console.log('Selected companies for verification:', selectedCompanies.length);
-            console.log('Selected companies:', selectedCompanies.map(c => ({
-                name: c.companyName, 
-                selected: c.selected,
-                status: c.verificationStatus || 'undefined'
-            })));
-            
-            if (selectedCompanies.length === 0) {
-                // Check if any companies are selected at all
-                const anySelected = companies.filter(c => c.selected);
-                if (anySelected.length === 0) {
-                    alert('Please select companies to verify by checking the checkboxes.');
-                } else {
-                    alert('Selected companies have already been verified. Please select companies with "pending" status.');
+                // Debug logging for first record
+                if (index === 0) {
+                    console.log('Processed first record address:', {
+                        addressLine1: record.addressLine1,
+                        addressLine2: record.addressLine2,
+                        city: record.city,
+                        county: record.county,
+                        postcode: record.postcode,
+                        complete: formatCompleteAddress(record)
+                    });
                 }
-                return;
-            }
-            
-            const button = document.getElementById('verifySelectedText');
-            const spinner = document.getElementById('verifySelectedSpinner');
-            
-            button.textContent = `Verifying ${selectedCompanies.length}...`;
-            spinner.style.display = 'inline-block';
-            
-            let completed = 0;
-            for (const company of selectedCompanies) {
-                await verifyIndividual(company.companyNumber);
-                completed++;
                 
-                const progress = (completed / selectedCompanies.length) * 100;
-                document.getElementById('verificationProgress').style.width = progress + '%';
-                document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
-                
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-            
-            button.textContent = 'Verify Selected';
-            spinner.style.display = 'none';
-            
-            alert(`Verification complete! Processed ${selectedCompanies.length} selected companies.`);
-            updateDashboardStats();
-            updateMailMergeTab();
-            
-            // Refresh the verification display
-            setupVerification();
-        }
-
-        // ============================================
-        // ENHANCED UPLOAD PROCESSING (UNCHANGED)
-        // ============================================
-        
-        // Fix 3: Enhanced processUploadedData with better debugging
-    function processUploadedData(data) {
-    console.log('Processing uploaded data...');
-    console.log('First row raw data:', data[0]);
-    console.log('Available columns:', Object.keys(data[0] || {}));
-    
-    uploadedData = data.map((row, index) => {
-        const record = {
-            id: index + 1,
-            companyName: row['Company Name'] || row['company_name'] || '',
-            companyNumber: row['Company Number'] || row['company_number'] || '',
-            pscTitle: row['PSC Title'] || row['Title'] || 'Mr',
-            pscFirstName: row['PSC First Name'] || row['PSC_First_Name'] || '',
-            pscLastName: row['PSC Last Name'] || row['PSC_Last_Name'] || '',
-            pscFullName: ((row['PSC First Name'] || '') + ' ' + (row['PSC Last Name'] || '')).trim(),
-            
-            // ENHANCED: Try multiple column name variations for addresses
-            addressLine1: row['PSC Address1'] || row['PSC_Address1'] || row['Address Line 1'] || row['PSC 1'] || '',
-            addressLine2: row['PSC Address2'] || row['PSC_Address2'] || row['Address Line 2'] || row['PSC 2'] || '',  
-            city: row['PSC Address3'] || row['PSC_Address3'] || row['City'] || row['PSC 3'] || '',
-            county: row['PSC Address4'] || row['PSC_Address4'] || row['County'] || row['PSC 4'] || '',
-            postcode: row['PSC Postcode'] || row['PSC_Postcode'] || row['Postcode'] || row['PSC Postcode'] || '',
-            
-            reference: row['Reference'] || row['reference'] || generateReference(),
-            industry: row['Industry'] || '',
-            turnover: row['Turnover'] || '',
-            status: 'pending',
-            selected: false,
-            inDatabase: companiesDatabase[row['Company Number']] ? true : false,
-            lastContact: companiesDatabase[row['Company Number']] ? companiesDatabase[row['Company Number']].lastMailDate : null
-        };
-        
-        // Debug logging for first record
-        if (index === 0) {
-            console.log('Processed first record:', {
-                addressLine1: record.addressLine1,
-                addressLine2: record.addressLine2,
-                city: record.city,
-                county: record.county,
-                postcode: record.postcode,
-                complete: formatCompleteAddress(record)
+                return record;
             });
-        }
-        
-        return record;
-    });
 
-    displayUploadedData();
-    updateUploadStats();
-    updateMailMergeTab();
-}
-
-        // Fix 2: CORRECTED displayUploadedData function - this was the main issue
-    
-    function displayUploadedData() {
-    const table = document.getElementById('dataTable');
-    const thead = table.querySelector('thead');
-    const tbody = table.querySelector('tbody');
-    
-    thead.innerHTML = '';
-    tbody.innerHTML = '';
-    
-    const headerRow = document.createElement('tr');
-    headerRow.innerHTML = `
-        <th><input type="checkbox" onchange="selectAll(this)"></th>
-        <th>Company Name</th>
-        <th>Company Number</th>
-        <th>PSC Name</th>
-        <th>Complete Address</th>
-        <th>CRM Status</th>
-        <th>Last Contact</th>
-        <th>Actions</th>
-    `;
-    thead.appendChild(headerRow);
-    
-    uploadedData.forEach((record, index) => {
-        const row = document.createElement('tr');
-        
-        // FIXED: Show complete address instead of just 3 components
-        const completeAddress = formatCompleteAddress(record);
-        
-        let crmStatus = 'New';
-        let statusClass = 'status-new';
-        if (record.inDatabase) {
-            const company = companiesDatabase[record.companyNumber];
-            crmStatus = company.status;
-            statusClass = `status-${company.status}`;
+            displayUploadedData();
+            updateUploadStats();
+            updateMailMergeTab();
         }
-        
-        row.innerHTML = `
-            <td><input type="checkbox" ${record.selected ? 'checked' : ''} onchange="toggleSelection(${index})"></td>
-            <td>${record.companyName}</td>
-            <td>${record.companyNumber}</td>
-            <td>${record.pscTitle} ${record.pscFullName}</td>
-            <td style="max-width: 250px; word-wrap: break-word;">
-                <div title="${completeAddress}">${completeAddress}</div>
-                <small style="color: #6c757d;">
-                    Line1: "${record.addressLine1}" | Line2: "${record.addressLine2 || 'empty'}" | 
-                    City: "${record.city}" | County: "${record.county || 'empty'}" | 
-                    Postcode: "${record.postcode}"
-                </small>
-            </td>
-            <td><span class="status-badge ${statusClass}">${crmStatus}</span></td>
-            <td>${record.lastContact || 'Never'}</td>
-            <td>
-                <button class="btn btn-sm" onclick="editRecord(${index})" style="padding: 5px 10px; font-size: 0.85rem;">Edit</button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-    
-    document.getElementById('dataPreview').style.display = 'block';
-}
+
+        // CORRECTED: Display all 5 address components
+        function displayUploadedData() {
+            const table = document.getElementById('dataTable');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+                <th><input type="checkbox" onchange="selectAll(this)"></th>
+                <th>Company Name</th>
+                <th>Company Number</th>
+                <th>PSC Name</th>
+                <th>Complete Address</th>
+                <th>CRM Status</th>
+                <th>Last Contact</th>
+                <th>Actions</th>
+            `;
+            thead.appendChild(headerRow);
+            
+            uploadedData.forEach((record, index) => {
+                const row = document.createElement('tr');
+                
+                // FIXED: Show all address components
+                const completeAddress = formatCompleteAddress(record);
+                
+                let crmStatus = 'New';
+                let statusClass = 'status-new';
+                if (record.inDatabase) {
+                    const company = companiesDatabase[record.companyNumber];
+                    crmStatus = company.status;
+                    statusClass = `status-${company.status}`;
+                }
+                
+                row.innerHTML = `
+                    <td><input type="checkbox" ${record.selected ? 'checked' : ''} onchange="toggleSelection(${index})"></td>
+                    <td>${record.companyName}</td>
+                    <td>${record.companyNumber}</td>
+                    <td>${record.pscTitle} ${record.pscFullName}</td>
+                    <td style="max-width: 300px; word-wrap: break-word;">
+                        <div>${completeAddress}</div>
+                        <small style="color: #6c757d; display: block; margin-top: 3px;">
+                            1:"${record.addressLine1}" | 2:"${record.addressLine2}" | 
+                            3:"${record.city}" | 4:"${record.county}" | PC:"${record.postcode}"
+                        </small>
+                    </td>
+                    <td><span class="status-badge ${statusClass}">${crmStatus}</span></td>
+                    <td>${record.lastContact || 'Never'}</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editRecord(${index})" style="padding: 5px 10px; font-size: 0.85rem;">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('dataPreview').style.display = 'block';
+        }
 
         function updateUploadStats() {
             const newCompanies = uploadedData.filter(r => !r.inDatabase).length;
@@ -1681,7 +1169,7 @@ function setupVerification() {
                 updateDashboardStats();
                 displayCompanies();
                 
-                // Refresh the upload view to show updated status
+                // Refresh the upload view
                 processUploadedData(uploadedData.map(r => ({
                     'Company Name': r.companyName,
                     'Company Number': r.companyNumber,
@@ -1701,7 +1189,7 @@ function setupVerification() {
         }
 
         // ============================================
-        // COMPANIES DATABASE DISPLAY (UNCHANGED)
+        // COMPANIES DATABASE DISPLAY
         // ============================================
         
         function displayCompanies(searchTerm = '') {
@@ -1741,7 +1229,7 @@ function setupVerification() {
                         </div>
                         
                         <div style="margin: 10px 0;">
-                            <strong>Address:</strong> ${company.primaryPSC.addressLine1}, ${company.primaryPSC.city}, ${company.primaryPSC.postcode}<br>
+                            <strong>Complete Address:</strong> ${formatCompleteAddress(company.primaryPSC)}<br>
                             ${company.website ? `<strong>Website:</strong> <a href="${company.website}" target="_blank">${company.website}</a><br>` : ''}
                             <strong>Reference:</strong> ${company.reference}
                         </div>
@@ -1760,7 +1248,7 @@ function setupVerification() {
                             <button class="btn btn-sm btn-secondary" onclick="editCompanyRecord('${company.companyNumber}')">
                                 Edit
                             </button>
-                            ${(!company.verificationStatus || company.verificationStatus === 'pending' || company.verificationStatus === 'error') ? `
+                            ${(!company.verificationStatus || company.verificationStatus === 'pending') ? `
                                 <button class="btn btn-sm btn-warning" onclick="verifyIndividual('${company.companyNumber}')">
                                     Verify PSC
                                 </button>
@@ -1801,7 +1289,363 @@ function setupVerification() {
         }
 
         // ============================================
-        // ENHANCED MAIL MERGE (UNCHANGED)
+        // SIMPLIFIED PSC VERIFICATION
+        // ============================================
+        
+        async function verifyIndividual(companyNumber) {
+            const company = companiesDatabase[companyNumber];
+            if (!company) return false;
+
+            try {
+                console.log(`Verifying company: ${companyNumber}`);
+                
+                const response = await fetch(`${API_CONFIG.baseURL}/psc/${companyNumber}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    company.verificationStatus = 'error';
+                    company.verificationDetails = {
+                        error: errorData.error || 'Company not found',
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    
+                    updateVerificationDisplay(companyNumber);
+                    saveCRMData();
+                    return false;
+                }
+
+                const data = await response.json();
+                
+                if (!data.items || data.items.length === 0) {
+                    company.verificationStatus = 'error';
+                    company.verificationDetails = {
+                        error: 'No PSC data found',
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    
+                    updateVerificationDisplay(companyNumber);
+                    saveCRMData();
+                    return false;
+                }
+
+                // Simple verification - just check if PSC exists and postcode matches
+                const yourPostcode = company.primaryPSC.postcode.toUpperCase().trim();
+                let bestMatch = null;
+                let isVerified = false;
+
+                for (const psc of data.items) {
+                    const chPostcode = (psc.address?.postal_code || '').toUpperCase().trim();
+                    const pscName = (psc.name || '').toUpperCase();
+                    const yourName = company.primaryPSC.pscLastName.toUpperCase();
+                    
+                    if (pscName.includes(yourName) && chPostcode === yourPostcode) {
+                        bestMatch = psc;
+                        isVerified = true;
+                        break;
+                    } else if (pscName.includes(yourName)) {
+                        bestMatch = psc;
+                    }
+                }
+
+                if (bestMatch) {
+                    company.verificationStatus = isVerified ? 'verified' : 'mismatch';
+                    company.verificationDetails = {
+                        date: new Date().toISOString().split('T')[0],
+                        matchedPSC: bestMatch,
+                        verified: isVerified
+                    };
+                } else {
+                    company.verificationStatus = 'error';
+                    company.verificationDetails = {
+                        error: 'No matching PSC found',
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                }
+
+                company.verificationDate = new Date().toISOString().split('T')[0];
+                updateVerificationDisplay(companyNumber);
+                saveCRMData();
+                
+                return true;
+
+            } catch (error) {
+                console.error(`Verification failed for ${companyNumber}:`, error);
+                
+                company.verificationStatus = 'error';
+                company.verificationDetails = {
+                    error: error.message,
+                    date: new Date().toISOString().split('T')[0]
+                };
+                
+                updateVerificationDisplay(companyNumber);
+                saveCRMData();
+                return false;
+            }
+        }
+
+        function updateVerificationDisplay(companyNumber) {
+            const company = companiesDatabase[companyNumber];
+            const resultDiv = document.getElementById(`verifyResult_${companyNumber}`);
+            
+            if (!resultDiv) return;
+            
+            let html = '';
+            
+            switch (company.verificationStatus) {
+                case 'verified':
+                    html = `
+                        <div class="verification-result verified">
+                            <strong>✓ Verified</strong> - PSC name and postcode match
+                        </div>
+                    `;
+                    break;
+                    
+                case 'mismatch':
+                    const details = company.verificationDetails;
+                    const yourAddress = formatCompleteAddress(company.primaryPSC);
+                    
+                    html = `
+                        <div class="verification-result mismatch">
+                            <strong>⚠️ Name Match, Address Different</strong><br>
+                            <div style="margin: 8px 0; font-size: 0.85rem;">
+                                <strong>Your Address:</strong> ${yourAddress}<br>
+                                <strong>Companies House:</strong> ${details.matchedPSC.address?.postal_code || 'Unknown'}
+                            </div>
+                            <button class="btn btn-sm btn-warning" onclick="updateWithCHData('${companyNumber}')" style="margin-top: 5px;">
+                                Update Address
+                            </button>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'error':
+                    html = `
+                        <div class="verification-result error">
+                            <strong>✗ Error:</strong> ${company.verificationDetails.error}
+                        </div>
+                    `;
+                    break;
+                    
+                default:
+                    html = `<div>Verifying...</div>`;
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+
+        function updateWithCHData(companyNumber) {
+            const company = companiesDatabase[companyNumber];
+            const chPSC = company.verificationDetails.matchedPSC;
+            
+            if (!chPSC || !chPSC.address) return;
+            
+            // Simple update with Companies House address
+            if (chPSC.address.postal_code) company.primaryPSC.postcode = chPSC.address.postal_code;
+            if (chPSC.address.locality) company.primaryPSC.city = chPSC.address.locality;
+            if (chPSC.address.region) company.primaryPSC.county = chPSC.address.region;
+            
+            company.verificationStatus = 'verified';
+            
+            saveCRMData();
+            updateVerificationDisplay(companyNumber);
+            updateDashboardStats();
+            
+            alert('Address updated with Companies House data');
+        }
+
+        // ============================================
+        // VERIFICATION TAB SETUP
+        // ============================================
+        
+        function setupVerification() {
+            const companies = Object.values(companiesDatabase);
+            
+            companies.forEach(company => {
+                if (!company.verificationStatus) {
+                    company.verificationStatus = 'pending';
+                }
+                if (company.selected === undefined) {
+                    company.selected = false;
+                }
+            });
+            saveCRMData();
+            
+            const pendingCount = companies.filter(c => c.verificationStatus === 'pending').length;
+            const verifiedCount = companies.filter(c => c.verificationStatus === 'verified').length;
+            const mismatchCount = companies.filter(c => c.verificationStatus === 'mismatch').length;
+            
+            if (companies.length === 0) {
+                document.getElementById('verificationContent').innerHTML = `
+                    <p style="color: #6c757d; margin: 20px 0;">No companies in database. Please add companies first.</p>
+                `;
+                return;
+            }
+            
+            document.getElementById('verificationContent').innerHTML = `
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-number">${companies.length}</div>
+                        <div class="stat-label">Total Companies</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${verifiedCount}</div>
+                        <div class="stat-label">Verified</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${mismatchCount}</div>
+                        <div class="stat-label">Mismatches</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${pendingCount}</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" onchange="selectAllVerify(this)"></th>
+                                <th>Company</th>
+                                <th>PSC Name</th>
+                                <th>Complete Address</th>
+                                <th>Verification Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${companies.map(company => `
+                                <tr>
+                                    <td><input type="checkbox" ${company.selected ? 'checked' : ''} onchange="toggleCompanySelection('${company.companyNumber}')"></td>
+                                    <td>
+                                        <strong>${company.companyName}</strong><br>
+                                        <small>${company.companyNumber}</small>
+                                    </td>
+                                    <td>${company.primaryPSC.pscTitle} ${company.primaryPSC.pscFullName}</td>
+                                    <td style="max-width: 250px; word-wrap: break-word;">
+                                        ${formatCompleteAddress(company.primaryPSC)}
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-${company.verificationStatus}">${company.verificationStatus}</span>
+                                        <div id="verifyResult_${company.companyNumber}"></div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="verifyIndividual('${company.companyNumber}')">
+                                            Verify
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('verifyActions').style.display = 'flex';
+            updateBadge('verifyBadge', pendingCount);
+            
+            companies.forEach(company => {
+                if (company.verificationStatus && company.verificationStatus !== 'pending') {
+                    updateVerificationDisplay(company.companyNumber);
+                }
+            });
+        }
+
+        function toggleCompanySelection(companyNumber) {
+            if (companiesDatabase[companyNumber]) {
+                companiesDatabase[companyNumber].selected = !companiesDatabase[companyNumber].selected;
+                saveCRMData();
+                console.log(`Company ${companyNumber} selected:`, companiesDatabase[companyNumber].selected);
+            }
+        }
+
+        function selectAllVerify(checkbox) {
+            Object.values(companiesDatabase).forEach(company => {
+                company.selected = checkbox.checked;
+            });
+            saveCRMData();
+            console.log('Select all:', checkbox.checked);
+        }
+
+        async function verifyAll() {
+            const companies = Object.values(companiesDatabase);
+            const pendingCompanies = companies.filter(c => c.verificationStatus === 'pending');
+            
+            if (pendingCompanies.length === 0) {
+                alert('No companies need verification.');
+                return;
+            }
+            
+            const button = document.getElementById('verifyBtnText');
+            const spinner = document.getElementById('verifySpinner');
+            
+            button.textContent = 'Verifying...';
+            spinner.style.display = 'inline-block';
+            
+            let completed = 0;
+            for (const company of pendingCompanies) {
+                await verifyIndividual(company.companyNumber);
+                completed++;
+                
+                const progress = (completed / pendingCompanies.length) * 100;
+                document.getElementById('verificationProgress').style.width = progress + '%';
+                document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            button.textContent = 'Verify All Records';
+            spinner.style.display = 'none';
+            
+            alert(`Verification complete! Processed ${pendingCompanies.length} companies.`);
+            updateDashboardStats();
+            updateMailMergeTab();
+            setupVerification();
+        }
+
+        async function verifySelected() {
+            const companies = Object.values(companiesDatabase);
+            const selectedCompanies = companies.filter(c => c.selected && c.verificationStatus === 'pending');
+            
+            if (selectedCompanies.length === 0) {
+                const anySelected = companies.filter(c => c.selected);
+                if (anySelected.length === 0) {
+                    alert('Please select companies to verify by checking the checkboxes.');
+                } else {
+                    alert('Selected companies have already been verified.');
+                }
+                return;
+            }
+            
+            const button = document.getElementById('verifySelectedText');
+            const spinner = document.getElementById('verifySelectedSpinner');
+            
+            button.textContent = `Verifying ${selectedCompanies.length}...`;
+            spinner.style.display = 'inline-block';
+            
+            let completed = 0;
+            for (const company of selectedCompanies) {
+                await verifyIndividual(company.companyNumber);
+                completed++;
+                
+                const progress = (completed / selectedCompanies.length) * 100;
+                document.getElementById('verificationProgress').style.width = progress + '%';
+                document.getElementById('verificationProgress').textContent = Math.round(progress) + '%';
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            button.textContent = 'Verify Selected';
+            spinner.style.display = 'none';
+            
+            alert(`Verification complete! Processed ${selectedCompanies.length} selected companies.`);
+            updateDashboardStats();
+            updateMailMergeTab();
+            setupVerification();
+        }
+
+        // ============================================
+        // MAIL MERGE
         // ============================================
         
         function updateMailMergeTab() {
@@ -1891,7 +1735,6 @@ function setupVerification() {
                                         <th>Last Contact</th>
                                         <th>Days Ago</th>
                                         <th>Reason</th>
-                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1902,12 +1745,6 @@ function setupVerification() {
                                             <td>${company.lastContact || 'N/A'}</td>
                                             <td>${company.daysSince || 'N/A'}</td>
                                             <td>${company.blockReason === 'recent_contact' ? 'Too Recent' : 'Do Not Contact'}</td>
-                                            <td>
-                                                ${company.blockReason === 'recent_contact' ? `
-                                                    <button onclick="overrideContactBlock('${company.companyNumber}')" 
-                                                            class="btn btn-sm btn-warning">Override</button>
-                                                ` : 'Blocked'}
-                                            </td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1951,7 +1788,6 @@ function setupVerification() {
                 };
             });
             
-            displayGeneratedLetters();
             updateBadge('printBadge', lettersGenerated.length);
             updateDashboardStats();
             
@@ -1969,10 +1805,10 @@ function setupVerification() {
             
             return `
                 <div class="letter-preview">
-                    <div class="letter-header">[STRICTLY PRIVATE AND CONFIDENTIAL]</div>
+                    <div style="text-decoration: underline; margin-bottom: 20px;">[STRICTLY PRIVATE AND CONFIDENTIAL]</div>
                     <div style="text-align: right;">London Office</div>
                     
-                    <div class="letter-address">
+                    <div style="margin: 20px 0;">
                         ${psc.pscTitle} ${psc.pscFirstName} ${psc.pscLastName}<br>
                         ${psc.addressLine1}<br>
                         ${psc.addressLine2 ? psc.addressLine2 + '<br>' : ''}
@@ -1981,7 +1817,7 @@ function setupVerification() {
                         ${psc.postcode}
                     </div>
                     
-                    <div class="letter-date">${today}</div>
+                    <div style="margin: 20px 0;">${today}</div>
                     
                     <div>Dear ${psc.pscTitle} ${psc.pscLastName},</div>
                     
@@ -1989,21 +1825,21 @@ function setupVerification() {
                         <strong>Ref: ${company.reference}</strong>
                     </div>
                     
-                    <div class="letter-body">
-                        <p>I am writing to you on a confidential basis following specific acquisition research work we have recently carried out.</p>
+                    <div style="margin: 20px 0; text-align: justify;">
+                        <p style="margin-bottom: 15px;">I am writing to you on a confidential basis following specific acquisition research work we have recently carried out.</p>
                         
-                        <p>It would appear that ${company.companyName} falls within the acquisition brief of a particular acquirer client of ours, thus I am writing to establish if you are interested in having an initial discussion regarding the possible sale of your business.</p>
+                        <p style="margin-bottom: 15px;">It would appear that ${company.companyName} falls within the acquisition brief of a particular acquirer client of ours, thus I am writing to establish if you are interested in having an initial discussion regarding the possible sale of your business.</p>
                         
-                        <p>As corporate intermediaries established for more than 40 years, we carry out acquisition work for our public and private company and private equity acquirer clients who have funds totalling more than £5bn to acquire businesses on a strictly private and confidential basis. We are a discreet firm and do not advertise to the public.</p>
+                        <p style="margin-bottom: 15px;">As corporate intermediaries established for more than 40 years, we carry out acquisition work for our public and private company and private equity acquirer clients who have funds totalling more than £5bn to acquire businesses on a strictly private and confidential basis. We are a discreet firm and do not advertise to the public.</p>
                         
-                        <p>The fees for our services are paid by our client, the acquirer, and we would make no charge to you, the vendor. We usually deal with vendor businesses which have not formally announced they are for sale, are not being actively marketed for sale and are seeking a discreet sale.</p>
+                        <p style="margin-bottom: 15px;">The fees for our services are paid by our client, the acquirer, and we would make no charge to you, the vendor. We usually deal with vendor businesses which have not formally announced they are for sale, are not being actively marketed for sale and are seeking a discreet sale.</p>
                         
-                        <p>If you are interested in such a possibility, I should welcome the opportunity of having an exploratory discussion with you at a time that suits you. I can assure you that the matter would be dealt with on a strictly confidential basis and would receive my immediate attention.</p>
+                        <p style="margin-bottom: 15px;">If you are interested in such a possibility, I should welcome the opportunity of having an exploratory discussion with you at a time that suits you. I can assure you that the matter would be dealt with on a strictly confidential basis and would receive my immediate attention.</p>
                         
-                        <p>I hope to hear from you at an early date and can be contacted directly on 0203 633 4829 or by email at: rudi@mgbco.co.uk.</p>
+                        <p style="margin-bottom: 15px;">I hope to hear from you at an early date and can be contacted directly on 0203 633 4829 or by email at: rudi@mgbco.co.uk.</p>
                     </div>
                     
-                    <div class="letter-signature">
+                    <div style="margin-top: 40px;">
                         <p>Yours sincerely,</p>
                         <br>
                         <br>
@@ -2018,8 +1854,8 @@ function setupVerification() {
             const psc = company.primaryPSC;
             
             return `
-                <div class="envelope-preview">
-                    <div class="envelope-address">
+                <div style="width: 400px; height: 200px; border: 2px solid #ccc; padding: 30px; display: flex; align-items: center; justify-content: center; font-family: 'Times New Roman', serif;">
+                    <div style="text-align: center; line-height: 1.8;">
                         ${psc.pscTitle} ${psc.pscFirstName} ${psc.pscLastName}<br>
                         ${psc.addressLine1}<br>
                         ${psc.addressLine2 ? psc.addressLine2 + '<br>' : ''}
@@ -2031,10 +1867,6 @@ function setupVerification() {
             `;
         }
 
-        function displayGeneratedLetters() {
-            alert('Letter display functionality from Phase 1 - will be enhanced in Phase 3');
-        }
-
         function exportVerificationReport() {
             const companies = Object.values(companiesDatabase);
             
@@ -2044,7 +1876,7 @@ function setupVerification() {
                 'PSC Title': company.primaryPSC.pscTitle,
                 'PSC First Name': company.primaryPSC.pscFirstName,
                 'PSC Last Name': company.primaryPSC.pscLastName,
-                'Full Address': `${company.primaryPSC.addressLine1}, ${company.primaryPSC.addressLine2 ? company.primaryPSC.addressLine2 + ', ' : ''}${company.primaryPSC.city}, ${company.primaryPSC.county ? company.primaryPSC.county + ', ' : ''}${company.primaryPSC.postcode}`,
+                'Complete Address': formatCompleteAddress(company.primaryPSC),
                 'Verification Status': company.verificationStatus || 'pending',
                 'Verification Date': company.verificationDate || '',
                 'Status': company.status,
@@ -2061,83 +1893,9 @@ function setupVerification() {
         }
 
         // ============================================
-        // UTILITY FUNCTIONS (MOSTLY UNCHANGED)
+        // FILE UPLOAD HANDLER
         // ============================================
-      
-        // NEW FUNCTION: Add this right here
-        function formatCompleteAddress(record) {
-        const parts = [
-        record.addressLine1,
-        record.addressLine2,
-        record.city,
-        record.county,
-        record.postcode
-        ].filter(part => part && part.trim() && part.trim() !== '');
-    
-        return parts.join(', ');
-        }
-     
-      // NEW FUNCTION 2: Add this debug function right after
-        function debugExcelColumns() {
-        if (uploadedData.length > 0) {
-        console.log('=== EXCEL COLUMN DEBUG ===');
-        console.log('Sample record address components:');
-        const sample = uploadedData[0];
-        console.log('addressLine1:', `"${sample.addressLine1}"`);
-        console.log('addressLine2:', `"${sample.addressLine2}"`);
-        console.log('city:', `"${sample.city}"`);
-        console.log('county:', `"${sample.county}"`);
-        console.log('postcode:', `"${sample.postcode}"`);
-        console.log('Complete formatted:', formatCompleteAddress(sample));
-        console.log('========================');
-        } else {
-        console.log('No uploaded data to debug. Upload data first.');
-    }
-}
         
-        function switchTab(tabName) {
-            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            const tabs = ['upload', 'companies', 'verify', 'merge', 'print'];
-            const tabIndex = tabs.indexOf(tabName);
-            document.querySelectorAll('.nav-tab')[tabIndex].classList.add('active');
-            document.getElementById(tabName + 'Tab').classList.add('active');
-            
-            // Update tab content when switching
-            if (tabName === 'companies') {
-                updateDashboardStats();
-                displayCompanies();
-            } else if (tabName === 'merge') {
-                updateMailMergeTab();
-            } else if (tabName === 'verify') {
-                setupVerification();
-            }
-        }
-
-        function updateBadge(badgeId, count) {
-            const badge = document.getElementById(badgeId);
-            if (count > 0) {
-                badge.style.display = 'inline-block';
-                badge.textContent = count;
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-        function generateReference() {
-            const prefix = 'HD';
-            const number = Math.floor(100000 + Math.random() * 900000);
-            return `${prefix}/${number}`;
-        }
-
-        function proceedToVerification() {
-            switchTab('verify');
-        }
-
-        // ============================================
-        // FILE UPLOAD HANDLER (UNCHANGED)
-        // ============================================
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -2165,8 +1923,9 @@ function setupVerification() {
         });
 
         // ============================================
-        // SAMPLE DATA (UNCHANGED)
+        // SAMPLE DATA
         // ============================================
+        
         function loadSampleData() {
             const sampleData = [
                 {
@@ -2238,11 +1997,11 @@ function setupVerification() {
         }
 
         function editRecord(index) {
-            alert('Edit functionality will be enhanced in Phase 3');
+            alert('Edit functionality will be enhanced in future phases');
         }
 
         function addManualCompany() {
-            alert('Manual company entry will be implemented in Phase 3');
+            alert('Manual company entry will be implemented in future phases');
         }
 
         function exportCRMData() {
@@ -2258,11 +2017,7 @@ function setupVerification() {
                 'PSC Title': company.primaryPSC.pscTitle,
                 'PSC First Name': company.primaryPSC.pscFirstName,
                 'PSC Last Name': company.primaryPSC.pscLastName,
-                'Address Line 1': company.primaryPSC.addressLine1,
-                'Address Line 2': company.primaryPSC.addressLine2,
-                'City': company.primaryPSC.city,
-                'County': company.primaryPSC.county,
-                'Postcode': company.primaryPSC.postcode,
+                'Complete Address': formatCompleteAddress(company.primaryPSC),
                 'Status': company.status,
                 'Verification Status': company.verificationStatus || 'pending',
                 'Reference': company.reference,
@@ -2281,23 +2036,19 @@ function setupVerification() {
         }
 
         function viewCompanyDetails(companyNumber) {
-            alert(`Company details view will be implemented in Phase 3`);
+            alert(`Company details view will be implemented in future phases`);
         }
 
         function editCompanyRecord(companyNumber) {
-            alert(`Company edit functionality will be implemented in Phase 3`);
+            alert(`Company edit functionality will be implemented in future phases`);
         }
 
         function generateSingleLetter(companyNumber) {
-            alert(`Single letter generation will be implemented in Phase 3`);
-        }
-
-        function overrideContactBlock(companyNumber) {
-            alert(`Contact override functionality will be implemented in Phase 3`);
+            alert(`Single letter generation will be implemented in future phases`);
         }
 
         function previewTemplate() {
-            alert('Template preview functionality unchanged from Phase 1');
+            alert('Template preview functionality unchanged from original');
         }
 
         function closeModal() {
@@ -2308,11 +2059,9 @@ function setupVerification() {
         // INITIALIZATION
         // ============================================
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('UK Business Outreach CRM System - Complete with Fixed Verification');
+            console.log('UK Business Outreach CRM System - Fully Corrected Version Loaded');
             initializeCRMDatabase();
         });
     </script>
 </body>
 </html>
-
-
